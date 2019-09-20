@@ -1,78 +1,69 @@
 #[macro_use]
 extern crate lazy_static;
 
-use clap::{Arg, App, SubCommand};
-
-fn main() {
-    let matches = App::new("My Super Program")
-                          .version("1.0")
-                          .author("Kevin K. <kbknapp@gmail.com>")
-                          .about("Does awesome things")
-                          .arg(Arg::with_name("config")
-                               .short("c")
-                               .long("config")
-                               .value_name("FILE")
-                               .help("Sets a custom config file")
-                               .takes_value(true))
-                          .arg(Arg::with_name("INPUT")
-                               .help("Sets the input file to use")
-                               .required(true)
-                               .index(1))
-                          .arg(Arg::with_name("v")
-                               .short("v")
-                               .multiple(true)
-                               .help("Sets the level of verbosity"))
-                          .subcommand(SubCommand::with_name("test")
-                                      .about("controls testing features")
-                                      .version("1.3")
-                                      .author("Someone E. <someone_else@other.com>")
-                                      .arg(Arg::with_name("debug")
-                                          .short("d")
-                                          .help("print debug information verbosely")))
-                          .get_matches();
-
-    // Gets a value for config if supplied by user, or defaults to "default.conf"
-    let config = matches.value_of("config").unwrap_or("default.conf");
-    println!("Value for config: {}", config);
-
-    // Calling .unwrap() is safe here because "INPUT" is required (if "INPUT" wasn't
-    // required we could have used an 'if let' to conditionally get the value)
-    println!("Using input file: {}", matches.value_of("INPUT").unwrap());
-
-    // Vary the output based on how many times the user used the "verbose" flag
-    // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
-    match matches.occurrences_of("v") {
-        0 => println!("No verbose info"),
-        1 => println!("Some verbose info"),
-        2 => println!("Tons of verbose info"),
-        3 | _ => println!("Don't be crazy"),
-    }
-
-    // You can handle information about subcommands by requesting their matches by name
-    // (as below), requesting just the name used, or both at the same time
-    if let Some(matches) = matches.subcommand_matches("test") {
-        if matches.is_present("debug") {
-            println!("Printing debug info...");
-        } else {
-            println!("Printing normally...");
-        }
-    }
-
-    // more program logic goes here...
-}
-
+use clap::{Arg, ArgMatches, App, SubCommand};
 use regex::Regex;
 use itertools::join;
 use unicode_segmentation::UnicodeSegmentation;
 use std::path::Path;
 use std::ffi::OsStr;
 
-fn has_ext_of(_path: &str, _ext: &str) -> bool {
-    let p = _path.to_uppercase();
-    let e = _ext.to_uppercase().replace(".", "");
+const APP_DESCRIPTION: &str = r#"
+pcr "Procrustes" SmArT is a CLI utility for copying subtrees containing supported audio
+files in sequence, naturally sorted.
+The end result is a "flattened" copy of the source subtree. "Flattened" means
+that only a namesake of the root source directory is created, where all the files get
+copied to, names prefixed with a serial number. Tag "Track Number"
+is set, tags "Title", "Artist", and "Album" can be replaced optionally.
+The writing process is strictly sequential: either starting with the number one file,
+or in the reversed order. This can be important for some mobile devices.
+"#;
+
+lazy_static! {
+    static ref ARGS: ArgMatches<'static> = retrieve_args();
+}
+
+fn retrieve_args() -> ArgMatches<'static> {
+    App::new(APP_DESCRIPTION)
+        .version("1.0")
+        .author("")
+        .about("")
+        .arg(Arg::with_name("config")
+           .short("c")
+           .long("config")
+           .value_name("FILE")
+           .help("Sets a custom config file")
+           .takes_value(true))
+        .arg(Arg::with_name("INPUT")
+           .help("Sets the input file to use")
+           .required(true)
+           .index(1))
+        .arg(Arg::with_name("v")
+           .short("v")
+           .multiple(true)
+           .help("Sets the level of verbosity"))
+        .subcommand(SubCommand::with_name("test")
+                  .about("controls testing features")
+                  .version("1.3")
+                  .author("Someone E. <someone_else@other.com>")
+                  .arg(Arg::with_name("debug")
+                      .short("d")
+                      .help("print debug information verbosely")))
+        .get_matches()
+}
+
+fn main() {
+    println!("[[[{}]]]", ARGS.value_of("INPUT").unwrap());
+}
+
+#[allow(dead_code)]
+fn has_ext_of(path: &str, ext: &str) -> bool {
+    let p = path.to_uppercase();
+    let e = ext.to_uppercase().replace(".", "");
     Path::new(&p).extension() == Some(OsStr::new(&e))
 }
 
+#[allow(dead_code)]
 fn str_strip_numbers(s: &str) -> Vec<i64> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"\d+").unwrap();
@@ -83,6 +74,7 @@ fn str_strip_numbers(s: &str) -> Vec<i64> {
         .collect()
 }
 
+#[allow(dead_code)]
 fn make_initials(authors: &str) -> String {
     lazy_static! {
         static ref SEP: Regex = Regex::new(r"[\s.]+").unwrap();
@@ -90,17 +82,17 @@ fn make_initials(authors: &str) -> String {
         static ref MON: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
     }
 
-    let _first_grapheme = |s| {
+    let first_grapheme = |s| {
         let g = UnicodeSegmentation::graphemes(s, true).collect::<Vec<&str>>();
         g[0]
     };
 
-    let _by_space = |s| join(SEP.split(s).filter(|x| !x.is_empty()).map(|x| _first_grapheme(x).to_uppercase()), ".");
-    let _by_hyph = |s| [join(HYPH.split(s).map(|x| _by_space(x)), "-"), ".".to_string()].concat();
+    let by_space = |s| join(SEP.split(s).filter(|x| !x.is_empty()).map(|x| first_grapheme(x).to_uppercase()), ".");
+    let by_hyph = |s| [join(HYPH.split(s).map(|x| by_space(x)), "-"), ".".to_string()].concat();
 
-    let _sans_monikers = MON.replace_all(authors, " ");
+    let sans_monikers = MON.replace_all(authors, " ");
 
-    join(_sans_monikers.split(",").map(_by_hyph), ",")
+    join(sans_monikers.split(",").map(by_hyph), ",")
 }
 
 #[cfg(test)]
