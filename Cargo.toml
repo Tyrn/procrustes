@@ -1,5 +1,5 @@
 [package]
-name = "pcr"
+name = "prs"
 version = "0.1.0"
 authors = ["Tyrn <a@b.com>"]
 edition = "2018"

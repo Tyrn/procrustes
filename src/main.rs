@@ -1,129 +1,195 @@
 #[macro_use]
 extern crate lazy_static;
 
-use clap::{Arg, ArgMatches, App};
-use regex::Regex;
+use clap::{App, Arg, ArgMatches};
 use itertools::join;
-use unicode_segmentation::UnicodeSegmentation;
-use std::path::Path;
 use path_absolutize::*;
-use std::path::PathBuf;
+use regex::Regex;
 use std::ffi::OsStr;
+use std::path::Path;
+use std::path::PathBuf;
+use unicode_segmentation::UnicodeSegmentation;
 
-const APP_DESCRIPTION: &str = r#"
-pcr "Procrustes" SmArT is a CLI utility for copying subtrees containing supported
-audio files in sequence, naturally sorted.
-The end result is a "flattened" copy of the source subtree. "Flattened" means
-that only a namesake of the root source directory is created, where all the files get
-copied to, names prefixed with a serial number. Tag "Track Number"
-is set, tags "Title", "Artist", and "Album" can be replaced optionally.
-The writing process is strictly sequential: either starting with the number one file,
-or in the reversed order. This can be important for some mobile devices.
-"#;
+const APP_DESCRIPTION: &str =
+    "A CLI utility for copying subtrees containing supported \
+     audio files in sequence, naturally sorted. \
+     The end result is a \"flattened\" copy of the source subtree. \"Flattened\" means \
+     that only a namesake of the root source directory is created, where all the files get \
+     copied to, names prefixed with a serial number. Tag \"Track Number\" \
+     is set, tags \"Title\", \"Artist\", and \"Album\" can be replaced optionally. \
+     The writing process is strictly sequential: either starting with the number one file, \
+     or in the reversed order. This can be important for some mobile devices.";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = retrieve_args();
-    static ref IS_TREE: bool = is_tree_dst();
-    static ref IS_ALBUM: bool = is_album_tag();
-    static ref ALBUM: &'static str = album_tag();
+//    static ref IS_TREE: bool = is_tree_dst();
+//    static ref IS_ALBUM: bool = is_album_tag();
+//    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
     static ref DST: PathBuf = pval("dst");
 }
 
-fn flag(name: &str) -> bool {if ARGS.occurrences_of(name) > 0 {true} else {false}}
-fn sval(name: &str) -> &str {ARGS.value_of(name).unwrap()}
-fn ival(name: &str) -> i64 {ARGS.value_of(name).unwrap().parse().expect("Not a number!")}
-fn pval(name: &str) -> PathBuf {Path::new(sval(name)).absolutize().unwrap()}
+fn flag(name: &str) -> bool {
+    if ARGS.occurrences_of(name) > 0 {
+        true
+    } else {
+        false
+    }
+}
 
-fn is_tree_dst() -> bool {if flag("t") && flag("r") {false} else {flag("t")}}
-fn is_album_tag() -> bool {if flag("u") && !flag("g") {true} else {flag("g")}}
-fn album_tag() -> &'static str {if flag("u") && !flag("g") {sval("u")} else {sval("g")}}
+fn sval(name: &str) -> &str {
+    ARGS.value_of(name).unwrap()
+}
+
+fn ival(name: &str) -> i64 {
+    ARGS.value_of(name).unwrap().parse().expect("Not a number!")
+}
+
+fn pval(name: &str) -> PathBuf {
+    Path::new(sval(name)).absolutize().unwrap()
+}
+
+fn is_tree_dst() -> bool {
+    if flag("t") && flag("r") {
+        false
+    } else {
+        flag("t")
+    }
+}
+
+fn is_album_tag() -> bool {
+    if flag("u") && !flag("g") {
+        true
+    } else {
+        flag("g")
+    }
+}
+
+fn album_tag() -> &'static str {
+    if flag("u") && !flag("g") {
+        sval("u")
+    } else {
+        sval("g")
+    }
+}
 
 fn retrieve_args() -> ArgMatches<'static> {
-    App::new(APP_DESCRIPTION)
+    App::new("\"Procrustes\" SmArT")
         .version("1.0")
         .author("")
-        .about("")
-        .arg(Arg::with_name("v")
-           .short("v")
-           .long("verbose")
-           .help("verbose output"))
-        .arg(Arg::with_name("d")
-           .short("d")
-           .long("drop-tracknumber")
-           .help("do not set track numbers"))
-        .arg(Arg::with_name("s")
-           .short("s")
-           .long("strip-decorations")
-           .help("strip file and directory name decorations"))
-        .arg(Arg::with_name("f")
-           .short("f")
-           .long("file-title")
-           .help("use file name for title tag"))
-        .arg(Arg::with_name("F")
-           .short("F")
-           .long("file-title-num")
-           .help("use numbered file name for title tag"))
-        .arg(Arg::with_name("x")
-           .short("x")
-           .long("sort-lex")
-           .help("sort files lexicographically"))
-        .arg(Arg::with_name("t")
-           .short("t")
-           .long("tree-dst")
-           .help("retain the tree structure of the source album at destination"))
-        .arg(Arg::with_name("p")
-           .short("p")
-           .long("drop-dst")
-           .help("do not create destination directory"))
-        .arg(Arg::with_name("r")
-           .short("r")
-           .long("reverse")
-           .help("copy files in reverse order (number one file is the last to be copied)"))
-        .arg(Arg::with_name("i")
-           .short("i")
-           .long("prepend-subdir-name")
-           .help("prepend current subdirectory name to a file name"))
-
-        .arg(Arg::with_name("e")
-           .short("e")
-           .long("file-type")
-           .value_name("EXT")
-           .help("accept only audio files of the specified type")
-           .takes_value(true))
-        .arg(Arg::with_name("u")
-           .short("u")
-           .long("unified-name")
-           .value_name("UNIFIED_NAME")
-           .help("UNIFIED_NAME for everything unspecified")
-           .takes_value(true))
-        .arg(Arg::with_name("b")
-           .short("b")
-           .long("album-num")
-           .value_name("ALBUM_NUM")
-           .help("0..99; prepend ALBUM_NUM to the destination root directory name")
-           .takes_value(true))
-        .arg(Arg::with_name("a")
-           .short("a")
-           .long("artist-tag")
-           .value_name("ARTIST_TAG")
-           .help("artist tag name")
-           .takes_value(true))
-        .arg(Arg::with_name("g")
-           .short("g")
-           .long("album-tag")
-           .value_name("ALBUM_TAG")
-           .help("album tag name")
-           .takes_value(true))
-        
-        .arg(Arg::with_name("src")
-           .help("source directory")
-           .required(true)
-           .index(1))
-        .arg(Arg::with_name("dst")
-           .help("general destination directory")
-           .required(true)
-           .index(2))
+        .about(APP_DESCRIPTION)
+        .arg(
+            Arg::with_name("v")
+                .short("v")
+                .long("verbose")
+                .help("verbose output"),
+        )
+        .arg(
+            Arg::with_name("d")
+                .short("d")
+                .long("drop-tracknumber")
+                .help("do not set track numbers"),
+        )
+        .arg(
+            Arg::with_name("s")
+                .short("s")
+                .long("strip-decorations")
+                .help("strip file and directory name decorations"),
+        )
+        .arg(
+            Arg::with_name("f")
+                .short("f")
+                .long("file-title")
+                .help("use file name for title tag"),
+        )
+        .arg(
+            Arg::with_name("F")
+                .short("F")
+                .long("file-title-num")
+                .help("use numbered file name for title tag"),
+        )
+        .arg(
+            Arg::with_name("x")
+                .short("x")
+                .long("sort-lex")
+                .help("sort files lexicographically"),
+        )
+        .arg(
+            Arg::with_name("t")
+                .short("t")
+                .long("tree-dst")
+                .help("retain the tree structure of the source album at destination"),
+        )
+        .arg(
+            Arg::with_name("p")
+                .short("p")
+                .long("drop-dst")
+                .help("do not create destination directory"),
+        )
+        .arg(
+            Arg::with_name("r")
+                .short("r")
+                .long("reverse")
+                .help("copy files in reverse order (number one file is the last to be copied)"),
+        )
+        .arg(
+            Arg::with_name("i")
+                .short("i")
+                .long("prepend-subdir-name")
+                .help("prepend current subdirectory name to a file name"),
+        )
+        .arg(
+            Arg::with_name("e")
+                .short("e")
+                .long("file-type")
+                .value_name("EXT")
+                .help("accept only audio files of the specified type")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("u")
+                .short("u")
+                .long("unified-name")
+                .value_name("UNIFIED_NAME")
+                .help("UNIFIED_NAME for everything unspecified")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("b")
+                .short("b")
+                .long("album-num")
+                .value_name("ALBUM_NUM")
+                .help("0..99; prepend ALBUM_NUM to the destination root directory name")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("a")
+                .short("a")
+                .long("artist-tag")
+                .value_name("ARTIST_TAG")
+                .help("artist tag name")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("g")
+                .short("g")
+                .long("album-tag")
+                .value_name("ALBUM_TAG")
+                .help("album tag name")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("src")
+                .help("source directory")
+                .required(true)
+                .index(1),
+        )
+        .arg(
+            Arg::with_name("dst")
+                .help("general destination directory")
+                .required(true)
+                .index(2),
+        )
         .get_matches()
 }
 
@@ -144,6 +210,7 @@ fn check_args() {
 fn main() {
     check_args();
     println!("VERBOSE: [{}]", flag("v"));
+    println!("TREE_DST: [{}]", is_tree_dst());
     println!("EXT: [{}, {}]", flag("e"), sval("e"));
     println!("ALBUM_NUM: [{}, {}]", flag("b"), ival("b"));
     println!("ALBUM_TAG: [{}, {}]", is_album_tag(), album_tag());
@@ -165,7 +232,7 @@ fn str_strip_numbers(s: &str) -> Vec<i64> {
     }
     // iterate over all matches
     RE.find_iter(s)
-        .filter_map(|digits| digits.as_str().parse().ok())  // Filter out numbers out of ixx range.
+        .filter_map(|digits| digits.as_str().parse().ok()) // Filter out numbers out of ixx range.
         .collect()
 }
 
@@ -182,8 +249,21 @@ fn make_initials(authors: &str) -> String {
         g[0]
     };
 
-    let by_space = |s| join(SEP.split(s).filter(|x| !x.is_empty()).map(|x| first_grapheme(x).to_uppercase()), ".");
-    let by_hyph = |s| [join(HYPH.split(s).map(|x| by_space(x)), "-"), ".".to_string()].concat();
+    let by_space = |s| {
+        join(
+            SEP.split(s)
+                .filter(|x| !x.is_empty())
+                .map(|x| first_grapheme(x).to_uppercase()),
+            ".",
+        )
+    };
+    let by_hyph = |s| {
+        [
+            join(HYPH.split(s).map(|x| by_space(x)), "-"),
+            ".".to_string(),
+        ]
+        .concat()
+    };
 
     let sans_monikers = MON.replace_all(authors, " ");
 
@@ -200,11 +280,13 @@ mod tests {
         assert_eq!(has_ext_of("/alfa/bra.vo/charlie.ogg", ".ogg"), true);
         assert_eq!(has_ext_of("/alfa/bra.vo/charlie.ogg", "mp3"), false);
     }
+
     #[test]
     fn stripping_numbers() {
         assert_eq!(str_strip_numbers("ab11cdd2k.144"), vec![11, 2, 144]);
         assert!(str_strip_numbers("Ignacio Vazquez-Abrams").is_empty());
     }
+
     #[test]
     fn making_initials() {
         assert_eq!(make_initials(" "), ".");
@@ -213,12 +295,21 @@ mod tests {
         assert_eq!(make_initials("Apsley Cherry-Garrard"), "A.C-G.");
         assert_eq!(make_initials("Windsor Saxe-\tCoburg - Gotha"), "W.S-C-G.");
         assert_eq!(make_initials("Elisabeth Kubler-- - Ross"), "E.K-R.");
-        assert_eq!(make_initials("  Fitz-Simmons Ashton-Burke Leigh"), "F-S.A-B.L.");
+        assert_eq!(
+            make_initials("  Fitz-Simmons Ashton-Burke Leigh"),
+            "F-S.A-B.L."
+        );
         assert_eq!(make_initials("Arleigh \"31-knot\"Burke "), "A.B.");
-        assert_eq!(make_initials("Harry \"Bing\" Crosby, Kris \"Tanto\" Paronto"), "H.C.,K.P.");
+        assert_eq!(
+            make_initials("Harry \"Bing\" Crosby, Kris \"Tanto\" Paronto"),
+            "H.C.,K.P."
+        );
         assert_eq!(make_initials("a.s.,b.s."), "A.S.,B.S.");
         assert_eq!(make_initials("A. Strugatsky, B...Strugatsky."), "A.S.,B.S.");
-        assert_eq!(make_initials("Иржи Кропачек, Йозеф Новотный"), "И.К.,Й.Н.");
+        assert_eq!(
+            make_initials("Иржи Кропачек, Йозеф Новотный"),
+            "И.К.,Й.Н."
+        );
         assert_eq!(make_initials("österreich"), "Ö.");
     }
 }
