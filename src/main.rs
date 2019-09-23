@@ -1,13 +1,16 @@
 #[macro_use]
 extern crate lazy_static;
 
+use alphanumeric_sort::sort_path_slice;
 use clap::{App, Arg, ArgMatches};
 use itertools::join;
 use path_absolutize::*;
 use regex::Regex;
-use std::ffi::OsStr;
-use std::path::Path;
-use std::path::PathBuf;
+use std::{
+    ffi::OsStr,
+    fs, io,
+    path::{Path, PathBuf},
+};
 use unicode_segmentation::UnicodeSegmentation;
 
 const APP_DESCRIPTION: &str =
@@ -207,6 +210,43 @@ fn check_args() {
     }
 }
 
+fn folders(dir: &Path, folder: bool) -> Result<Vec<PathBuf>, io::Error> {
+    Ok(fs::read_dir(dir)?
+        .into_iter()
+        .filter(|r| r.is_ok())
+        .map(|r| r.unwrap().path())
+        .filter(|r| if folder { r.is_dir() } else { !r.is_dir() })
+        .collect())
+}
+
+#[allow(dead_code)]
+fn offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
+    fs::read_dir(dir)?
+        .into_iter()
+        .map(|x| x.map(|entry| entry.path()))
+        .collect()
+}
+
+fn groom(dir: &Path, rev: bool) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    let mut dirs = folders(dir, true).unwrap();
+    let mut files = folders(dir, false).unwrap();
+    sort_path_slice(&mut dirs);
+    sort_path_slice(&mut files);
+    if rev {
+        dirs.reverse();
+        files.reverse();
+    }
+    (dirs, files)
+}
+
+fn copy_album() {
+    let (dirs, files) = groom(&SRC.as_path(), false);
+
+    println!("dirs: {:?}", dirs);
+    println!("files: {:?}", files);
+    println!("folders: {:?}", offspring(&SRC.as_path()).unwrap());
+}
+
 fn main() {
     check_args();
     println!("VERBOSE: [{}]", flag("v"));
@@ -216,6 +256,7 @@ fn main() {
     println!("ALBUM_TAG: [{}, {}]", is_album_tag(), album_tag());
     println!("SRC: [{}, {}]", flag("src"), SRC.display());
     println!("DST: [{}, {}]", flag("dst"), DST.display());
+    copy_album();
 }
 
 #[allow(dead_code)]
