@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate lazy_static;
 
-use alphanumeric_sort::sort_path_slice;
+use alphanumeric_sort::{
+    sort_path_slice,
+};
 use clap::{App, Arg, ArgMatches};
 use itertools::join;
 use path_absolutize::*;
@@ -227,24 +229,58 @@ fn offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
         .collect()
 }
 
-fn groom(dir: &Path, rev: bool) -> (Vec<PathBuf>, Vec<PathBuf>) {
+fn list_dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut dirs = folders(dir, true).unwrap();
     let mut files = folders(dir, false).unwrap();
-    sort_path_slice(&mut dirs);
-    sort_path_slice(&mut files);
-    if rev {
+    if flag("x") {
+        dirs.sort_unstable();
+        files.sort_unstable();
+    } else {
+        sort_path_slice(&mut dirs);
+        sort_path_slice(&mut files);
+    }
+    if flag("r") {
         dirs.reverse();
         files.reverse();
     }
     (dirs, files)
 }
 
+fn traverse_flat_dst(src_dir: &PathBuf, dst_step: Vec<PathBuf>) {
+    let (dirs, files) = list_dir_groom(src_dir);
+
+    for d in dirs.iter() {
+        let mut step = dst_step.clone();
+        step.push(PathBuf::from(d.file_name().unwrap()));
+        println!("d: {:?}; step: {:?}", d, step);
+        traverse_flat_dst(d, step);
+    }
+    for f in files.iter() {
+        println!("f: {:?}", f);
+    }
+}
+
+//#[allow(dead_code)]
+//fn traverse_flat_dst_iter(src_dir: &PathBuf, dst_step: Vec<PathBuf>) {
+//    let (dirs, files) = list_dir_groom(src_dir);
+//
+//    let traverse = |d| {
+//        let mut step = dst_step.clone();
+//        step.push(PathBuf::from(d.file_name().unwrap()));
+//        traverse_flat_dst_iter(d, step);
+// 
+//    };
+//    // This is something that I just wish to be true!
+//    flat_map(dirs, traverse) + map(files)    
+//}
+
 fn copy_album() {
-    let (dirs, files) = groom(&SRC.as_path(), false);
+    let (dirs, files) = list_dir_groom(&SRC.as_path());
 
     println!("dirs: {:?}", dirs);
     println!("files: {:?}", files);
     println!("folders: {:?}", offspring(&SRC.as_path()).unwrap());
+    traverse_flat_dst(&SRC, [].to_vec()); 
 }
 
 fn main() {
