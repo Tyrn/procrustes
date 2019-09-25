@@ -1,9 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 
-use alphanumeric_sort::{
-    sort_path_slice,
-};
+use alphanumeric_sort::sort_path_slice;
 use clap::{App, Arg, ArgMatches};
 use itertools::join;
 use path_absolutize::*;
@@ -260,19 +258,26 @@ fn traverse_flat_dst(src_dir: &PathBuf, dst_step: Vec<PathBuf>) {
     }
 }
 
-//#[allow(dead_code)]
-//fn traverse_flat_dst_iter(src_dir: &PathBuf, dst_step: Vec<PathBuf>) {
-//    let (dirs, files) = list_dir_groom(src_dir);
-//
-//    let traverse = |d| {
-//        let mut step = dst_step.clone();
-//        step.push(PathBuf::from(d.file_name().unwrap()));
-//        traverse_flat_dst_iter(d, step);
-// 
-//    };
-//    // This is something that I just wish to be true!
-//    flat_map(dirs, traverse) + map(files)    
-//}
+#[allow(dead_code)]
+fn traverse_flat_dst_iter(
+    src_dir: &PathBuf,
+    dst_step: Vec<PathBuf>,
+) -> impl Iterator<Item = (PathBuf, PathBuf)> {
+    let (dirs, files) = list_dir_groom(src_dir);
+
+    let traverse = |d: PathBuf| -> Box<dyn Iterator<Item = (PathBuf, PathBuf)>> {
+        let mut step = dst_step.clone();
+        step.push(PathBuf::from(d.file_name().unwrap()));
+        Box::new(traverse_flat_dst_iter(&d, step))
+    };
+//// Three commented out lines below are good and working Rust, they just do nothing useful.
+    dirs.into_iter()
+        .map(|d| (d, PathBuf::new()))
+        .chain(files.into_iter().map(|f| (f, PathBuf::new())))
+//    dirs.into_iter()
+//        .flat_map(traverse)
+//        .chain(files.into_iter().map(|f| (f, PathBuf::new())))
+}
 
 fn copy_album() {
     let (dirs, files) = list_dir_groom(&SRC.as_path());
@@ -280,7 +285,11 @@ fn copy_album() {
     println!("dirs: {:?}", dirs);
     println!("files: {:?}", files);
     println!("folders: {:?}", offspring(&SRC.as_path()).unwrap());
-    traverse_flat_dst(&SRC, [].to_vec()); 
+    traverse_flat_dst(&SRC, [].to_vec());
+    println!("||||||||||||||||||||||||");
+    for d in traverse_flat_dst_iter(&SRC, [].to_vec()) {
+        println!("iter(d): {:?}", d);
+    }
 }
 
 fn main() {
