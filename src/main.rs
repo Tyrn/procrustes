@@ -210,12 +210,12 @@ fn check_args() {
     }
 }
 
-fn folders(dir: &Path, folder: bool) -> Result<Vec<PathBuf>, io::Error> {
+fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
         .into_iter()
         .filter(|r| r.is_ok())
         .map(|r| r.unwrap().path())
-        .filter(|r| if folder { r.is_dir() } else { !r.is_dir() })
+        .filter(|r| if folders { r.is_dir() } else { !r.is_dir() })
         .collect())
 }
 
@@ -227,9 +227,9 @@ fn offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
         .collect()
 }
 
-fn list_dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
-    let mut dirs = folders(dir, true).unwrap();
-    let mut files = folders(dir, false).unwrap();
+fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    let mut dirs = fs_entries(dir, true).unwrap();
+    let mut files = fs_entries(dir, false).unwrap();
     if flag("x") {
         dirs.sort_unstable();
         files.sort_unstable();
@@ -244,46 +244,40 @@ fn list_dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     (dirs, files)
 }
 
-fn traverse_flat_dst(src_dir: &PathBuf, dst_step: Vec<PathBuf>) {
-    let (dirs, files) = list_dir_groom(src_dir);
-
-    for d in dirs.iter() {
-        let mut step = dst_step.clone();
-        step.push(PathBuf::from(d.file_name().unwrap()));
-        println!("d: {:?}; step: {:?}", d, step);
-        traverse_flat_dst(d, step);
-    }
-    for f in files.iter() {
-        println!("f: {:?}", f);
-    }
-}
-
-#[allow(dead_code)]
-fn traverse_flat_dst_iter(
+fn traverse_flat_dst(
     src_dir: &PathBuf,
     dst_step: Vec<PathBuf>,
 ) -> impl Iterator<Item = (PathBuf, PathBuf)> {
-    let (dirs, files) = list_dir_groom(src_dir);
+    let (dirs, files) = groom(src_dir);
 
     let traverse = move |d: PathBuf| -> Box<dyn Iterator<Item = (PathBuf, PathBuf)>> {
         let mut step = dst_step.clone();
         step.push(PathBuf::from(d.file_name().unwrap()));
-        Box::new(traverse_flat_dst_iter(&d, step))
+        Box::new(traverse_flat_dst(&d, step))
     };
-    dirs.into_iter()
-        .flat_map(traverse)
-        .chain(files.into_iter().map(|f| (f, PathBuf::new())))
+    let handle = |f: PathBuf| {
+        let dst_path: PathBuf = [&DST.as_os_str(), f.file_name().unwrap()].iter().collect();
+        (f, dst_path)
+    };
+    if flag("r") {
+        dirs.into_iter()
+            .flat_map(traverse)
+            .chain(files.into_iter().map(handle))
+    } else {
+        dirs.into_iter()
+            .flat_map(traverse)
+            .chain(files.into_iter().map(handle))
+    }
 }
 
 fn copy_album() {
-    let (dirs, files) = list_dir_groom(&SRC.as_path());
+    let (dirs, files) = groom(&SRC.as_path());
 
     println!("dirs: {:?}", dirs);
     println!("files: {:?}", files);
     println!("folders: {:?}", offspring(&SRC.as_path()).unwrap());
-    traverse_flat_dst(&SRC, [].to_vec());
     println!("||||||||||||||||||||||||");
-    for d in traverse_flat_dst_iter(&SRC, [].to_vec()) {
+    for d in traverse_flat_dst(&SRC, [].to_vec()) {
         println!("iter(d): {:?}", d);
     }
 }
