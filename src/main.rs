@@ -247,26 +247,26 @@ fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
 fn traverse_flat_dst(
     src_dir: &PathBuf,
     dst_step: Vec<PathBuf>,
-) -> impl Iterator<Item = (PathBuf, PathBuf)> {
+) -> Box<dyn Iterator<Item = (PathBuf, PathBuf)>> {
     let (dirs, files) = groom(src_dir);
 
-    let traverse = move |d: PathBuf| -> Box<dyn Iterator<Item = (PathBuf, PathBuf)>> {
+    let traverse = move |d: PathBuf| {
         let mut step = dst_step.clone();
         step.push(PathBuf::from(d.file_name().unwrap()));
-        Box::new(traverse_flat_dst(&d, step))
+        traverse_flat_dst(&d, step)
     };
     let handle = |f: PathBuf| {
         let dst_path: PathBuf = [&DST.as_os_str(), f.file_name().unwrap()].iter().collect();
         (f, dst_path)
     };
     if flag("r") {
-        dirs.into_iter()
-            .flat_map(traverse)
-            .chain(files.into_iter().map(handle))
+        Box::new(files.into_iter()
+            .map(handle)
+            .chain(dirs.into_iter().flat_map(traverse)))
     } else {
-        dirs.into_iter()
+        Box::new(dirs.into_iter()
             .flat_map(traverse)
-            .chain(files.into_iter().map(handle))
+            .chain(files.into_iter().map(handle)))
     }
 }
 
