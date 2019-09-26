@@ -382,10 +382,7 @@ mod tests {
         );
         assert_eq!(make_initials("a.s.,b.s."), "A.S.,B.S.");
         assert_eq!(make_initials("A. Strugatsky, B...Strugatsky."), "A.S.,B.S.");
-        assert_eq!(
-            make_initials("Иржи Кропачек, Йозеф Новотный"),
-            "И.К.,Й.Н."
-        );
+        assert_eq!(make_initials("Иржи Кропачек, Йозеф Новотный"), "И.К.,Й.Н.");
         assert_eq!(make_initials("österreich"), "Ö.");
     }
 }
