@@ -10,6 +10,7 @@ use std::{
     ffi::OsStr,
     fs, io,
     path::{Path, PathBuf},
+    process::exit,
 };
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -29,7 +30,48 @@ lazy_static! {
 //    static ref IS_ALBUM: bool = is_album_tag();
 //    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
-    static ref DST: PathBuf = pval("dst");
+    static ref DST: PathBuf = executive_dst();
+}
+
+// Creates the destination directory according to options.
+// TODO: possibly call check_args() from here.
+fn executive_dst() -> PathBuf {
+    let prefix = if flag("b") {
+        format!("{:02}-", ival("b"))
+    } else {
+        "".to_string()
+    };
+    let base_dst = format!(
+        "{}{}",
+        prefix,
+        if flag("u") {
+            format!("{}{}", artist(false), sval("u"))
+        } else {
+            pval("src")
+                .file_name()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string()
+        }
+    );
+    if flag("p") {
+        pval("dst")
+    } else {
+        [pval("dst"), PathBuf::from(base_dst)].iter().collect()
+    }
+}
+
+fn artist(forw_dash: bool) -> String {
+    if flag("a") {
+        if forw_dash {
+            format!("-{}", sval("a"))
+        } else {
+            format!("{}-", sval("a"))
+        }
+    } else {
+        "".to_string()
+    }
 }
 
 fn flag(name: &str) -> bool {
@@ -41,11 +83,14 @@ fn flag(name: &str) -> bool {
 }
 
 fn sval(name: &str) -> &str {
-    ARGS.value_of(name).unwrap()
+    ARGS.value_of(name).unwrap_or("NULL_STR")
 }
 
 fn ival(name: &str) -> i64 {
-    ARGS.value_of(name).unwrap().parse().expect("Not a number!")
+    ARGS.value_of(name)
+        .unwrap_or("NULL_INT")
+        .parse()
+        .expect("Option value must be a valid number!")
 }
 
 fn pval(name: &str) -> PathBuf {
@@ -78,7 +123,7 @@ fn album_tag() -> &'static str {
 
 fn retrieve_args() -> ArgMatches<'static> {
     App::new("\"Procrustes\" SmArT")
-        .version("1.0")
+        .version("1.0.2")
         .author("")
         .about(APP_DESCRIPTION)
         .arg(
@@ -197,13 +242,15 @@ fn retrieve_args() -> ArgMatches<'static> {
 }
 
 fn check_args() {
-    if !SRC.exists() {
-        println!("Source directory \"{}\" is not there.", SRC.display());
-        std::process::exit(0);
+    let (src, dst) = (pval("src"), pval("dst"));
+
+    if !src.exists() {
+        println!("Source directory \"{}\" is not there.", src.display());
+        exit(0);
     }
-    if !DST.exists() {
-        println!("Destination path \"{}\" is not there.", DST.display());
-        std::process::exit(0);
+    if !dst.exists() {
+        println!("Destination path \"{}\" is not there.", dst.display());
+        exit(0);
     }
     if flag("t") && flag("r") {
         println!("  *** -t option ignored (conflicts with -r) ***");
@@ -260,13 +307,18 @@ fn traverse_flat_dst(
         (f, dst_path)
     };
     if flag("r") {
-        Box::new(files.into_iter()
-            .map(handle)
-            .chain(dirs.into_iter().flat_map(traverse)))
+        Box::new(
+            files
+                .into_iter()
+                .map(handle)
+                .chain(dirs.into_iter().flat_map(traverse)),
+        )
     } else {
-        Box::new(dirs.into_iter()
-            .flat_map(traverse)
-            .chain(files.into_iter().map(handle)))
+        Box::new(
+            dirs.into_iter()
+                .flat_map(traverse)
+                .chain(files.into_iter().map(handle)),
+        )
     }
 }
 
@@ -277,8 +329,8 @@ fn copy_album() {
     println!("files: {:?}", files);
     println!("folders: {:?}", offspring(&SRC.as_path()).unwrap());
     println!("||||||||||||||||||||||||");
-    for d in traverse_flat_dst(&SRC, [].to_vec()) {
-        println!("iter(d): {:?}", d);
+    for (_i, (src, dst)) in traverse_flat_dst(&SRC, [].to_vec()).enumerate() {
+        println!("iter(src, dst): ({:?}, {:?})", src, dst);
     }
 }
 

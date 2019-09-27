@@ -72,7 +72,7 @@ album tag name
 
 ### Examples
 ```
-Source Album $ pcp -a "Peter Crowcroft" -g "Mice All Over" . /run/media/user/F8950/Audiobooks/
+Source Album $ prs -a "Peter Crowcroft" -g "Mice All Over" . /run/media/user/F8950/Audiobooks/
 ```
 - Destination directory `/run/media/user/F8950/Audiobooks/Source Album/` is created;
 
@@ -85,7 +85,7 @@ regardless of the absence of the leading zeroes);
 
 - *Title* is set to *1 P.C. - Mice All Over* for the first file, all titles enumerated;
 ```
-Source Album $ pcp -dst . /run/media/user/F8950/Audiobooks/
+Source Album $ prs -dst . /run/media/user/F8950/Audiobooks/
 ```
 - *Source Album* directory is copied to `/run/media/user/F8950/Audiobooks/` in its entirety,
 without modification; sequential copy order, natural or lexicographical, is guaranteed.
