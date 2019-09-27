@@ -255,6 +255,22 @@ fn check_args() {
     if flag("t") && flag("r") {
         println!("  *** -t option ignored (conflicts with -r) ***");
     }
+    if !flag("p") {
+        if DST.exists() {
+            println!(
+                "Destination directory \"{}\" already exists.",
+                DST.display()
+            );
+            exit(0);
+        }
+        fs::create_dir(&DST.as_path()).expect(
+            format!(
+                "Destination directory \"{}\" already exists!",
+                DST.display()
+            )
+            .as_str(),
+        );
+    }
 }
 
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
@@ -291,21 +307,19 @@ fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     (dirs, files)
 }
 
-fn traverse_flat_dst(
+fn traverse_dir(
     src_dir: &PathBuf,
     dst_step: Vec<PathBuf>,
 ) -> Box<dyn Iterator<Item = (PathBuf, PathBuf)>> {
     let (dirs, files) = groom(src_dir);
+    let destination_step = dst_step.clone();
 
     let traverse = move |d: PathBuf| {
         let mut step = dst_step.clone();
         step.push(PathBuf::from(d.file_name().unwrap()));
-        traverse_flat_dst(&d, step)
+        traverse_dir(&d, step)
     };
-    let handle = |f: PathBuf| {
-        let dst_path: PathBuf = [&DST.as_os_str(), f.file_name().unwrap()].iter().collect();
-        (f, dst_path)
-    };
+    let handle = move |f: PathBuf| (f, destination_step.iter().collect());
     if flag("r") {
         Box::new(
             files
@@ -329,8 +343,8 @@ fn copy_album() {
     println!("files: {:?}", files);
     println!("folders: {:?}", offspring(&SRC.as_path()).unwrap());
     println!("||||||||||||||||||||||||");
-    for (_i, (src, dst)) in traverse_flat_dst(&SRC, [].to_vec()).enumerate() {
-        println!("iter(src, dst): ({:?}, {:?})", src, dst);
+    for (_i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
+        println!("iter(src, step): ({:?}, {:?})", src, step);
     }
 }
 
