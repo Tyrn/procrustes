@@ -13,6 +13,7 @@ use std::{
     process::exit,
 };
 use unicode_segmentation::UnicodeSegmentation;
+use walkdir::WalkDir;
 
 const APP_DESCRIPTION: &str =
     "A CLI utility for copying subtrees containing supported \
@@ -187,6 +188,12 @@ fn retrieve_args() -> ArgMatches<'static> {
                 .help("prepend current subdirectory name to a file name"),
         )
         .arg(
+            Arg::with_name("w")
+                .short("w")
+                .long("overwrite")
+                .help("silently remove existing destination directory (not recommended)"),
+        )
+        .arg(
             Arg::with_name("e")
                 .short("e")
                 .long("file-type")
@@ -257,11 +264,21 @@ fn check_args() {
     }
     if !flag("p") {
         if DST.exists() {
-            println!(
-                "Destination directory \"{}\" already exists.",
-                DST.display()
-            );
-            exit(0);
+            if flag("w") {
+                fs::remove_dir_all(&DST.as_path()).expect(
+                    format!(
+                        "Failed to remove destination directory \"{}\".",
+                        DST.display()
+                    )
+                    .as_str(),
+                );
+            } else {
+                println!(
+                    "Destination directory \"{}\" already exists.",
+                    DST.display()
+                );
+                exit(0);
+            }
         }
         fs::create_dir(&DST.as_path()).expect(
             format!(
@@ -273,12 +290,31 @@ fn check_args() {
     }
 }
 
+fn audiofiles_count(dir: &Path) -> usize {
+    let mut count = 0;
+
+    for i in WalkDir::new(dir) {
+        let entry = i.unwrap();
+        let path = entry.path();
+        if path.is_file() && is_audiofile(path.to_str().unwrap()) {
+            count = count + 1;
+        }
+    }
+    count
+}
+
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
         .into_iter()
         .filter(|r| r.is_ok())
         .map(|r| r.unwrap().path())
-        .filter(|r| if folders { r.is_dir() } else { !r.is_dir() })
+        .filter(|r| {
+            if folders {
+                r.is_dir()
+            } else {
+                r.is_file() && is_audiofile(r.to_str().unwrap())
+            }
+        })
         .collect())
 }
 
@@ -337,19 +373,18 @@ fn traverse_dir(
 }
 
 fn copy_album() {
-    let (dirs, files) = groom(&SRC.as_path());
+    check_args();
 
-    println!("dirs: {:?}", dirs);
-    println!("files: {:?}", files);
-    println!("folders: {:?}", offspring(&SRC.as_path()).unwrap());
-    println!("||||||||||||||||||||||||");
-    for (_i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-        println!("iter(src, step): ({:?}, {:?})", src, step);
+    let count = audiofiles_count(&SRC.as_path());
+    let n = |i| if flag("r") { count - i } else { i + 1 };
+
+    for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
+        println!("iter(i, src, step): ({}, {:?}, {:?})", n(i), src, step);
     }
 }
 
 fn main() {
-    check_args();
+    copy_album();
     println!("VERBOSE: [{}]", flag("v"));
     println!("TREE_DST: [{}]", is_tree_dst());
     println!("EXT: [{}, {}]", flag("e"), sval("e"));
@@ -357,10 +392,15 @@ fn main() {
     println!("ALBUM_TAG: [{}, {}]", is_album_tag(), album_tag());
     println!("SRC: [{}, {}]", flag("src"), SRC.display());
     println!("DST: [{}, {}]", flag("dst"), DST.display());
-    copy_album();
 }
 
-#[allow(dead_code)]
+/// Returns true, if [path] is a recognized audio file.
+///
+fn is_audiofile(path: &str) -> bool {
+    let exts = ["MP3", "M4A", "M4B", "OGG", "WMA", "FLAC"];
+    exts.iter().any(|ext| has_ext_of(path, ext))
+}
+
 fn has_ext_of(path: &str, ext: &str) -> bool {
     let p = path.to_uppercase();
     let e = ext.to_uppercase().replace(".", "");
@@ -415,6 +455,14 @@ fn make_initials(authors: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checking_audiofile() {
+        assert_eq!(is_audiofile("/alfa/bra.vo/charlie.ogg"), true);
+        assert_eq!(is_audiofile("/alfa/bra.vo/charlie.MP3"), true);
+        assert_eq!(is_audiofile("/alfa/bra.vo/charlie.pdf"), false);
+        assert_eq!(is_audiofile("/alfa/bra.vo/charlie"), false);
+    }
 
     #[test]
     fn checking_ext_of() {
