@@ -310,7 +310,7 @@ fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
 fn traverse_dir(
     src_dir: &PathBuf,
     dst_step: Vec<PathBuf>,
-) -> Box<dyn Iterator<Item = (PathBuf, PathBuf)>> {
+) -> Box<dyn Iterator<Item = (PathBuf, Vec<PathBuf>)>> {
     let (dirs, files) = groom(src_dir);
     let destination_step = dst_step.clone();
 
@@ -319,7 +319,7 @@ fn traverse_dir(
         step.push(PathBuf::from(d.file_name().unwrap()));
         traverse_dir(&d, step)
     };
-    let handle = move |f: PathBuf| (f, destination_step.iter().collect());
+    let handle = move |f: PathBuf| (f, destination_step.clone());
     if flag("r") {
         Box::new(
             files
