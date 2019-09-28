@@ -376,10 +376,37 @@ fn copy_album() {
     check_args();
 
     let count = audiofiles_count(&SRC.as_path());
+    let width = format!("{}", count).len();
+
     let n = |i| if flag("r") { count - i } else { i + 1 };
 
+    let decor = |src: &PathBuf, ii: usize| -> PathBuf {
+        if flag("s") {
+            PathBuf::from(src.file_name().unwrap())
+        } else {
+            let prefix = format!("{:01$}", ii, width);
+
+            if flag("u") {
+                let ext = src.extension().unwrap();
+                let name = format!("{}-{}.{}", prefix, sval("u"), ext.to_str().unwrap());
+                PathBuf::from(name)
+            } else {
+                let fnm = src.file_name().unwrap();
+                let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
+                PathBuf::from(name)
+            }
+        }
+    };
+
     for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-        println!("iter(i, src, step): ({}, {:?}, {:?})", n(i), src, step);
+        println!(
+            "iter(i, w, src, step, file): ({}, {}, {:?}, {:?}, {:?})",
+            n(i),
+            width,
+            src,
+            step,
+            decor(&src, n(i))
+        );
     }
 }
 
@@ -455,6 +482,11 @@ fn make_initials(authors: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn checking_pad() {
+        assert_eq!(format!("{:01$}", 1, 4), "0001");
+    }
 
     #[test]
     fn checking_audiofile() {
