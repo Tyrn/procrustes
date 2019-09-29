@@ -62,7 +62,7 @@ fn executive_dst() -> PathBuf {
     }
 }
 
-// Artist snippet to build a directory or file name.
+// Cuts the artist snippet to build a directory or file name.
 fn artist(forw_dash: bool) -> String {
     if flag("a") {
         if forw_dash {
@@ -474,7 +474,7 @@ fn copy_album() {
             } else if flag("a") {
                 tag.set_title(&title(sval("a")));
                 tag.set_artist(sval("a"));
-            } else if flag("g") {
+            } else if is_album_tag() {
                 tag.set_title(&title(album_tag()));
                 tag.set_album(album_tag());
             }
