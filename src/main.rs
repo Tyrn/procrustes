@@ -14,6 +14,7 @@ use std::{
 };
 use unicode_segmentation::UnicodeSegmentation;
 use walkdir::WalkDir;
+use taglib;
 
 const APP_DESCRIPTION: &str =
     "A CLI utility for copying subtrees containing supported \
@@ -34,8 +35,7 @@ lazy_static! {
     static ref DST: PathBuf = executive_dst();
 }
 
-// Creates the destination directory according to options.
-// TODO: possibly call check_args() from here.
+// Calculates the destination directory according to options.
 fn executive_dst() -> PathBuf {
     let prefix = if flag("b") {
         format!("{:02}-", ival("b"))
@@ -98,14 +98,7 @@ fn pval(name: &str) -> PathBuf {
     Path::new(sval(name)).absolutize().unwrap()
 }
 
-fn is_tree_dst() -> bool {
-    if flag("t") && flag("r") {
-        false
-    } else {
-        flag("t")
-    }
-}
-
+#[allow(dead_code)]
 fn is_album_tag() -> bool {
     if flag("u") && !flag("g") {
         true
@@ -114,6 +107,7 @@ fn is_album_tag() -> bool {
     }
 }
 
+#[allow(dead_code)]
 fn album_tag() -> &'static str {
     if flag("u") && !flag("g") {
         sval("u")
@@ -194,6 +188,12 @@ fn retrieve_args() -> ArgMatches<'static> {
                 .help("silently remove existing destination directory (not recommended)"),
         )
         .arg(
+            Arg::with_name("y")
+                .short("y")
+                .long("dry-run")
+                .help("without actually copying the files"),
+        )
+        .arg(
             Arg::with_name("e")
                 .short("e")
                 .long("file-type")
@@ -259,10 +259,7 @@ fn check_args() {
         println!("Destination path \"{}\" is not there.", dst.display());
         exit(0);
     }
-    if flag("t") && flag("r") {
-        println!("  *** -t option ignored (conflicts with -r) ***");
-    }
-    if !flag("p") {
+    if !flag("p") && !flag("y") {
         if DST.exists() {
             if flag("w") {
                 fs::remove_dir_all(&DST.as_path()).expect(
@@ -376,15 +373,30 @@ fn copy_album() {
     check_args();
 
     let count = audiofiles_count(&SRC.as_path());
+    if count < 1 {
+        println!("No audio files found at \"{}\"", SRC.display());
+        exit(0);
+    }
     let width = format!("{}", count).len();
 
     let n = |i| if flag("r") { count - i } else { i + 1 };
 
-    let decor = |src: &PathBuf, ii: usize| -> PathBuf {
-        if flag("s") {
+    // Extracts file name from [src] and makes it pretty, if necessary.
+    let decor = |ii, src: &PathBuf, step: &Vec<PathBuf>| -> PathBuf {
+        if flag("s") && flag("t") {
             PathBuf::from(src.file_name().unwrap())
         } else {
-            let prefix = format!("{:01$}", ii, width);
+            let prefix = if flag("i") && !flag("t") {
+                if step.len() > 0 {
+                    let lines = step.iter().map(|p| p.to_str().unwrap());
+                    let chain = join(lines, "-");
+                    format!("{:01$}-[{2}]", ii, width, chain)
+                } else {
+                    format!("{:01$}", ii, width)
+                }
+            } else {
+                format!("{:01$}", ii, width)
+            };
 
             if flag("u") {
                 let ext = src.extension().unwrap();
@@ -398,27 +410,64 @@ fn copy_album() {
         }
     };
 
+    let copy = |ii, src: &PathBuf, step: &Vec<PathBuf>| {
+        let file_name = decor(ii, src, step);
+        let depth: PathBuf = if flag("t") {
+            step.iter().collect()
+        } else {
+            PathBuf::new()
+        };
+        if flag("t") && !flag("y") {
+            let dst_dir = DST.join(&depth);
+            fs::create_dir_all(&dst_dir).expect(
+                format!(
+                    "Error while creating \"{}\" directory.",
+                    &dst_dir.to_str().unwrap()
+                )
+                .as_str(),
+            );
+        }
+        let dst = DST.join(&depth).join(&file_name);
+
+        // All the copying and tagging happens here.
+        if !flag("y") {
+            fs::copy(&src, &dst).expect(
+                format!("Error while copying \"{}\" file.", &dst.to_str().unwrap()).as_str(),
+            );
+            let tag_file = taglib::File::new(&dst).expect(
+                format!(
+                    "Error while opening \"{}\" for tagging.",
+                    &dst.to_str().unwrap()
+                )
+                .as_str(),
+            );
+            let mut tag = tag_file.tag().expect("No tagging data.");
+            tag.set_album("ZZZ");
+            tag_file.save();
+        }
+
+        if flag("v") {
+            println!("{:1$}/{2} {3}", ii, width, count, &dst.to_str().unwrap());
+        } else {
+            print!(".");
+        }
+    };
+
+    if !flag("v") {
+        print!("Starting ");
+    }
+
     for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-        println!(
-            "iter(i, w, src, step, file): ({}, {}, {:?}, {:?}, {:?})",
-            n(i),
-            width,
-            src,
-            step,
-            decor(&src, n(i))
-        );
+        copy(n(i), &src, &step);
+    }
+
+    if !flag("v") {
+        println!(" Done ({}).", count);
     }
 }
 
 fn main() {
     copy_album();
-    println!("VERBOSE: [{}]", flag("v"));
-    println!("TREE_DST: [{}]", is_tree_dst());
-    println!("EXT: [{}, {}]", flag("e"), sval("e"));
-    println!("ALBUM_NUM: [{}, {}]", flag("b"), ival("b"));
-    println!("ALBUM_TAG: [{}, {}]", is_album_tag(), album_tag());
-    println!("SRC: [{}, {}]", flag("src"), SRC.display());
-    println!("DST: [{}, {}]", flag("dst"), DST.display());
 }
 
 /// Returns true, if [path] is a recognized audio file.
