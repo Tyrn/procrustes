@@ -12,9 +12,9 @@ use std::{
     path::{Path, PathBuf},
     process::exit,
 };
+use taglib;
 use unicode_segmentation::UnicodeSegmentation;
 use walkdir::WalkDir;
-use taglib;
 
 const APP_DESCRIPTION: &str =
     "A CLI utility for copying subtrees containing supported \
@@ -379,6 +379,7 @@ fn copy_album() {
     }
     let width = format!("{}", count).len();
 
+    // Calculates file number.
     let n = |i| if flag("r") { count - i } else { i + 1 };
 
     // Extracts file name from [src] and makes it pretty, if necessary.
@@ -410,6 +411,8 @@ fn copy_album() {
         }
     };
 
+    // Calculates destination for [src] file to be copied to and
+    // makes a copy.
     let copy = |ii, src: &PathBuf, step: &Vec<PathBuf>| {
         let file_name = decor(ii, src, step);
         let depth: PathBuf = if flag("t") {
@@ -434,6 +437,7 @@ fn copy_album() {
             fs::copy(&src, &dst).expect(
                 format!("Error while copying \"{}\" file.", &dst.to_str().unwrap()).as_str(),
             );
+
             let tag_file = taglib::File::new(&dst).expect(
                 format!(
                     "Error while opening \"{}\" for tagging.",
@@ -442,7 +446,38 @@ fn copy_album() {
                 .as_str(),
             );
             let mut tag = tag_file.tag().expect("No tagging data.");
-            tag.set_album("ZZZ");
+
+            // Calculates the contents for the title tag.
+            let title = |s: &str| -> String {
+                let stem = &src.file_stem().unwrap().to_str().unwrap();
+                if flag("F") {
+                    format!("{}>{}", ii, &stem)
+                } else if flag("f") {
+                    stem.to_string()
+                } else {
+                    format!("{} {}", ii, s)
+                }
+            };
+
+            if !flag("d") {
+                tag.set_track(ii as u32);
+            }
+            if flag("a") && flag("g") {
+                tag.set_title(&title(&format!(
+                    "{} - {}",
+                    make_initials(sval("a")),
+                    album_tag()
+                )));
+                tag.set_artist(sval("a"));
+                tag.set_album(album_tag());
+            } else if flag("a") {
+                tag.set_title(&title(sval("a")));
+                tag.set_artist(sval("a"));
+            } else if flag("g") {
+                tag.set_title(&title(album_tag()));
+                tag.set_album(album_tag());
+            }
+
             tag_file.save();
         }
 
@@ -494,7 +529,6 @@ fn str_strip_numbers(s: &str) -> Vec<i64> {
         .collect()
 }
 
-#[allow(dead_code)]
 fn make_initials(authors: &str) -> String {
     lazy_static! {
         static ref SEP: Regex = Regex::new(r"[\s.]+").unwrap();
