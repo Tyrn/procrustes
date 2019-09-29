@@ -4,11 +4,11 @@ extern crate lazy_static;
 use alphanumeric_sort::sort_path_slice;
 use clap::{App, Arg, ArgMatches};
 use itertools::join;
-use path_absolutize::*;
 use regex::Regex;
 use std::{
     ffi::OsStr,
     fs, io,
+    io::Write,
     path::{Path, PathBuf},
     process::exit,
 };
@@ -28,7 +28,6 @@ const APP_DESCRIPTION: &str =
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = retrieve_args();
-//    static ref IS_TREE: bool = is_tree_dst();
 //    static ref IS_ALBUM: bool = is_album_tag();
 //    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
@@ -63,12 +62,13 @@ fn executive_dst() -> PathBuf {
     }
 }
 
+// Artist snippet to build a directory or file name.
 fn artist(forw_dash: bool) -> String {
     if flag("a") {
         if forw_dash {
-            format!("-{}", sval("a"))
+            format!(" - {}", sval("a"))
         } else {
-            format!("{}-", sval("a"))
+            format!("{} - ", sval("a"))
         }
     } else {
         "".to_string()
@@ -95,10 +95,9 @@ fn ival(name: &str) -> i64 {
 }
 
 fn pval(name: &str) -> PathBuf {
-    Path::new(sval(name)).absolutize().unwrap()
+    Path::new(sval(name)).canonicalize().unwrap()
 }
 
-#[allow(dead_code)]
 fn is_album_tag() -> bool {
     if flag("u") && !flag("g") {
         true
@@ -107,7 +106,6 @@ fn is_album_tag() -> bool {
     }
 }
 
-#[allow(dead_code)]
 fn album_tag() -> &'static str {
     if flag("u") && !flag("g") {
         sval("u")
@@ -379,9 +377,6 @@ fn copy_album() {
     }
     let width = format!("{}", count).len();
 
-    // Calculates file number.
-    let n = |i| if flag("r") { count - i } else { i + 1 };
-
     // Extracts file name from [src] and makes it pretty, if necessary.
     let decor = |ii, src: &PathBuf, step: &Vec<PathBuf>| -> PathBuf {
         if flag("s") && flag("t") {
@@ -401,7 +396,13 @@ fn copy_album() {
 
             if flag("u") {
                 let ext = src.extension().unwrap();
-                let name = format!("{}-{}.{}", prefix, sval("u"), ext.to_str().unwrap());
+                let name = format!(
+                    "{}-{}{}.{}",
+                    prefix,
+                    sval("u"),
+                    artist(true),
+                    ext.to_str().unwrap()
+                );
                 PathBuf::from(name)
             } else {
                 let fnm = src.file_name().unwrap();
@@ -462,7 +463,7 @@ fn copy_album() {
             if !flag("d") {
                 tag.set_track(ii as u32);
             }
-            if flag("a") && flag("g") {
+            if flag("a") && is_album_tag() {
                 tag.set_title(&title(&format!(
                     "{} - {}",
                     make_initials(sval("a")),
@@ -485,12 +486,17 @@ fn copy_album() {
             println!("{:1$}/{2} {3}", ii, width, count, &dst.to_str().unwrap());
         } else {
             print!(".");
+            io::stdout().flush().unwrap();
         }
     };
 
     if !flag("v") {
         print!("Starting ");
+        io::stdout().flush().unwrap();
     }
+
+    // Calculates file number.
+    let n = |i| if flag("r") { count - i } else { i + 1 };
 
     for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
         copy(n(i), &src, &step);
