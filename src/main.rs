@@ -14,7 +14,6 @@ use std::{
 };
 use taglib;
 use unicode_segmentation::UnicodeSegmentation;
-use walkdir::WalkDir;
 
 const APP_DESCRIPTION: &str =
     "A CLI utility for copying subtrees containing supported \
@@ -285,17 +284,20 @@ fn check_args() {
     }
 }
 
-fn audiofiles_count(dir: &Path) -> usize {
-    let mut count = 0;
-
-    for i in WalkDir::new(dir) {
-        let entry = i.unwrap();
-        let path = entry.path();
-        if path.is_file() && is_audiofile(path.to_str().unwrap()) {
-            count = count + 1;
-        }
-    }
-    count
+fn tracks_count(dir: &Path) -> usize {
+    fs::read_dir(dir)
+        .unwrap()
+        .into_iter()
+        .filter(|r| r.is_ok())
+        .map(|r| {
+            let p = r.unwrap().path();
+            if p.is_dir() {
+                tracks_count(&p)
+            } else {
+                one_for_audiofile(&p)
+            }
+        })
+        .sum()
 }
 
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
@@ -307,7 +309,7 @@ fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
             if folders {
                 r.is_dir()
             } else {
-                r.is_file() && is_audiofile(r.to_str().unwrap())
+                one_for_audiofile(&r) > 0
             }
         })
         .collect())
@@ -370,7 +372,7 @@ fn traverse_dir(
 fn copy_album() {
     check_args();
 
-    let count = audiofiles_count(&SRC.as_path());
+    let count = tracks_count(&SRC.as_path());
     if count < 1 {
         println!("No audio files found at \"{}\"", SRC.display());
         exit(0);
@@ -496,10 +498,18 @@ fn copy_album() {
     }
 
     // Calculates file number.
-    let n = |i| if flag("r") { count - i } else { i + 1 };
+    macro_rules! entry_num {
+        ($i: expr) => {
+            if flag("r") {
+                count - $i
+            } else {
+                $i + 1
+            }
+        };
+    }
 
     for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-        copy(n(i), &src, &step);
+        copy(entry_num!(i), &src, &step);
     }
 
     if !flag("v") {
@@ -511,11 +521,25 @@ fn main() {
     copy_album();
 }
 
-/// Returns true, if [path] is a recognized audio file.
+/// Returns 1, if [path] has an audio file extension, otherwise 0.
 ///
-fn is_audiofile(path: &str) -> bool {
-    let exts = ["MP3", "M4A", "M4B", "OGG", "WMA", "FLAC"];
-    exts.iter().any(|ext| has_ext_of(path, ext))
+#[allow(dead_code)]
+fn one_for_audiofile_ext(path: &Path) -> usize {
+    ["MP3", "M4A", "M4B", "OGG", "WMA", "FLAC"]
+        .iter()
+        .any(|ext| has_ext_of(path.to_str().unwrap(), ext)) as usize
+}
+
+/// Returns 1, if [path] is a valid audio file, otherwise 0.
+///
+fn one_for_audiofile(path: &Path) -> usize {
+    match taglib::File::new(path) {
+        Err(_) => 0,
+        Ok(v) => match v.tag() {
+            Err(_) => 0,
+            Ok(_) => 1,
+        },
+    }
 }
 
 fn has_ext_of(path: &str, ext: &str) -> bool {
@@ -579,10 +603,19 @@ mod tests {
 
     #[test]
     fn checking_audiofile() {
-        assert_eq!(is_audiofile("/alfa/bra.vo/charlie.ogg"), true);
-        assert_eq!(is_audiofile("/alfa/bra.vo/charlie.MP3"), true);
-        assert_eq!(is_audiofile("/alfa/bra.vo/charlie.pdf"), false);
-        assert_eq!(is_audiofile("/alfa/bra.vo/charlie"), false);
+        assert_eq!(
+            one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie.ogg")),
+            1
+        );
+        assert_eq!(
+            one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie.MP3")),
+            1
+        );
+        assert_eq!(
+            one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie.pdf")),
+            0
+        );
+        assert_eq!(one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie")), 0);
     }
 
     #[test]
