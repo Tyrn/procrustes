@@ -1,5 +1,5 @@
 [package]
-name = "prs"
+name = "procrustes"
 version = "1.0.2"
 authors = ["Tyrn <a@b.com>"]
 edition = "2018"
@@ -13,5 +13,4 @@ itertools = "0.8.0"
 unicode-segmentation = "1.3.0"
 alphanumeric-sort = "1.0.11"
 clap = "~2.33"
-walkdir = "2"
 taglib = "*"
