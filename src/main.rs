@@ -2,7 +2,7 @@
 extern crate lazy_static;
 
 use alphanumeric_sort::sort_path_slice;
-use clap::{App, Arg, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches};
 use itertools::join;
 use regex::Regex;
 use std::{
@@ -114,8 +114,9 @@ fn album_tag() -> &'static str {
 }
 
 fn retrieve_args() -> ArgMatches<'static> {
-    App::new("\"Procrustes\" SmArT")
-        .version("1.0.2")
+    App::new("procrustes")
+        .setting(AppSettings::ColoredHelp)
+        .version("v1.0.2")
         .author("")
         .about(APP_DESCRIPTION)
         .arg(
