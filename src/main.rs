@@ -31,6 +31,11 @@ lazy_static! {
 //    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
     static ref DST: PathBuf = executive_dst();
+    static ref INITIALS: String = if flag("a") {
+        make_initials(sval("a"))
+    } else {
+        "".to_string()
+    };
 }
 
 // Calculates the destination directory according to options.
@@ -467,11 +472,7 @@ fn copy_album() {
                 tag.set_track(ii as u32);
             }
             if flag("a") && is_album_tag() {
-                tag.set_title(&title(&format!(
-                    "{} - {}",
-                    make_initials(sval("a")),
-                    album_tag()
-                )));
+                tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), album_tag())));
                 tag.set_artist(sval("a"));
                 tag.set_album(album_tag());
             } else if flag("a") {
