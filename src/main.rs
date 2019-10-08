@@ -560,37 +560,45 @@ fn str_strip_numbers(s: &str) -> Vec<i64> {
         .collect()
 }
 
+/// Returns a comma-separated list of initials,
+/// [authors] being a comma-separated list of full names.
+///
 fn make_initials(authors: &str) -> String {
     lazy_static! {
-        static ref SEP: Regex = Regex::new(r"[\s.]+").unwrap();
-        static ref HYPH: Regex = Regex::new(r"\s*(?:-\s*)+").unwrap();
-        static ref MON: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
+        static ref SPACE: Regex = Regex::new(r"[\s.]+").unwrap();
+        static ref HYPHEN: Regex = Regex::new(r"\s*(?:-\s*)+").unwrap();
+        static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
     }
 
-    let first_grapheme = |s| {
+    fn first_grapheme(s: &str) -> &str {
         let g = UnicodeSegmentation::graphemes(s, true).collect::<Vec<&str>>();
         g[0]
-    };
+    }
 
-    let by_space = |s| {
+    // Returns a string of uppercase initials, separated by periods,
+    // [names] being a string of names, separated by whitespaces.
+    fn collect_initials(names: &str) -> String {
         join(
-            SEP.split(s)
+            SPACE
+                .split(names)
                 .filter(|x| !x.is_empty())
                 .map(|x| first_grapheme(x).to_uppercase()),
             ".",
         )
-    };
-    let by_hyph = |s| {
-        [
-            join(HYPH.split(s).map(|x| by_space(x)), "-"),
-            ".".to_string(),
-        ]
-        .concat()
-    };
+    }
 
-    let sans_monikers = MON.replace_all(authors, " ");
-
-    join(sans_monikers.split(",").map(by_hyph), ",")
+    join(
+        NICKNAME.replace_all(authors, " ").split(",").map(|author| {
+            [
+                // Full set of author's initials,
+                // and the final period.
+                join(HYPHEN.split(author).map(|x| collect_initials(x)), "-"),
+                ".".to_string(),
+            ]
+            .concat()
+        }),
+        ",",
+    )
 }
 
 #[cfg(test)]
