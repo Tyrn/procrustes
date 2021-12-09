@@ -15,8 +15,7 @@ use std::{
 use taglib;
 use unicode_segmentation::UnicodeSegmentation;
 
-const APP_DESCRIPTION: &str =
-    "A CLI utility for copying subtrees containing supported \
+const APP_DESCRIPTION: &str = "A CLI utility for copying subtrees containing supported \
      audio files in sequence, naturally sorted. \
      The end result is a \"flattened\" copy of the source subtree. \"Flattened\" means \
      that only a namesake of the root source directory is created, where all the files get \

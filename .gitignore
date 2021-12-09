@@ -1,3 +1,11 @@
 /target
 **/*.rs.bk
+
+# IDE
 *.vim
+.nvimlog
+*.geany
+.idea
+*.sublime-project
+*.sublime-workspace
+
