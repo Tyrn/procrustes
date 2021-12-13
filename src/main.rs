@@ -570,9 +570,8 @@ fn make_initials(authors: &str) -> String {
         static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
     }
 
-    fn first_grapheme(s: &str) -> &str {
-        let g = UnicodeSegmentation::graphemes(s, true).collect::<Vec<&str>>();
-        g[0]
+    fn gv(s: &str) -> Vec<&str> {
+        UnicodeSegmentation::graphemes(s, true).collect::<Vec<&str>>()
     }
 
     join(
@@ -591,7 +590,7 @@ fn make_initials(authors: &str) -> String {
                                     SPACE
                                         .split(barrel)
                                         .filter(|name| !name.is_empty())
-                                        .map(|name| first_grapheme(name).to_uppercase()),
+                                        .map(|name| gv(name)[0].to_uppercase()),
                                     ".",
                                 )
                             }),
