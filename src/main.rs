@@ -585,7 +585,7 @@ fn make_initials(authors: &str) -> String {
                     join(
                         author
                             .split("-")
-                            .filter(|author| author.replace(".", "").trim() != "")
+                            .filter(|barrel| barrel.replace(".", "").trim() != "")
                             .map(|barrel| {
                                 join(
                                     SPACE
