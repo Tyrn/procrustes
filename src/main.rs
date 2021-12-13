@@ -574,6 +574,21 @@ fn make_initials(authors: &str) -> String {
         UnicodeSegmentation::graphemes(s, true).collect::<Vec<&str>>()
     }
 
+    fn form_initial(name: &str) -> String {
+        let cut: Vec<&str> = name.split("'").collect();
+
+        if cut.len() > 1 && !cut[1].is_empty() {
+           if gv(cut[1])[0].chars().next().unwrap().is_lowercase() && !cut[0].is_empty() {
+               return cut[0].to_uppercase()
+           }
+           return cut[0].to_owned() + "'" + &gv(cut[1])[0].to_uppercase()
+        }
+
+        let v = gv(name);
+        let i = v[0].to_uppercase() + &v[1..].concat();
+        gv(&i)[0].to_uppercase()
+    }
+
     join(
         NICKNAME
             .replace_all(authors, " ")
@@ -590,7 +605,7 @@ fn make_initials(authors: &str) -> String {
                                     SPACE
                                         .split(barrel)
                                         .filter(|name| !name.is_empty())
-                                        .map(|name| gv(name)[0].to_uppercase()),
+                                        .map(|name| form_initial(name)),
                                     ".",
                                 )
                             }),
