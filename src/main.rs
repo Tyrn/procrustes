@@ -575,28 +575,32 @@ fn make_initials(authors: &str) -> String {
         g[0]
     }
 
-    // Returns a string of uppercase initials, separated by periods,
-    // [names] being a string of names, separated by whitespaces.
-    fn collect_initials(names: &str) -> String {
-        join(
-            SPACE
-                .split(names)
-                .filter(|x| !x.is_empty())
-                .map(|x| first_grapheme(x).to_uppercase()),
-            ".",
-        )
-    }
-
     join(
-        NICKNAME.replace_all(authors, " ").split(",").map(|author| {
-            [
-                // Full set of author's initials,
-                // and the final period.
-                join(HYPHEN.split(author).map(|x| collect_initials(x)), "-"),
-                ".".to_string(),
-            ]
-            .concat()
-        }),
+        NICKNAME
+            .replace_all(authors, " ")
+            .split(",")
+            .filter(|author| author.replace(".", "").replace("-", "").trim() != "")
+            .map(|author| {
+                [
+                    join(
+                        author
+                            .split("-")
+                            .filter(|author| author.replace(".", "").trim() != "")
+                            .map(|barrel| {
+                                join(
+                                    SPACE
+                                        .split(barrel)
+                                        .filter(|name| !name.is_empty())
+                                        .map(|name| first_grapheme(name).to_uppercase()),
+                                    ".",
+                                )
+                            }),
+                        "-",
+                    ),
+                    ".".to_string(),
+                ]
+                .concat()
+            }),
         ",",
     )
 }

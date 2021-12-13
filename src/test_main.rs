@@ -37,7 +37,8 @@ fn test_str_strip_numbers() {
 
 #[test]
 fn test_make_initials() {
-    assert_eq!(make_initials(" "), ".");
+    assert_eq!(make_initials(""), "");
+    assert_eq!(make_initials(" "), "");
     assert_eq!(make_initials("John ronald reuel Tolkien"), "J.R.R.T.");
     assert_eq!(make_initials("  e.B.Sledge "), "E.B.S.");
     assert_eq!(make_initials("Apsley Cherry-Garrard"), "A.C-G.");
