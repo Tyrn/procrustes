@@ -64,19 +64,31 @@ fn test_make_initials() {
     assert_eq!(make_initials("a.s.,b.s."), "A.S.,B.S.");
     assert_eq!(make_initials("A. Strugatsky, B...Strugatsky."), "A.S.,B.S.");
     assert_eq!(
-        make_initials("Язон динАльт, Шарль д'Артаньян"),
+        make_initials("язон динАльт, шарль д'Артаньян"),
         "Я.динА.,Ш.д'А."
     );
+    assert_eq!(make_initials("шарль д'артаньян"), "Ш.Д.");
     assert_eq!(
         make_initials("Charles de Batz de Castelmore d'Artagnan"),
         "C.d.B.d.C.d'A."
     );
-    assert_eq!(make_initials("Иржи Кропачек, Йозеф Новотный"), "И.К.,Й.Н.");
+    assert_eq!(
+         make_initials("Mario Del Monaco, Hutchinson of London"), "M.D.M.,H.o.L."
+     );
+    assert_eq!(make_initials("Anselm haut Rodric"), "A.h.R.");
+    assert_eq!(make_initials("Ансельм от Родрик"), "А.о.Р.");
+    assert_eq!(make_initials("Leonardo Wilhelm DiCaprio"), "L.W.DiC.");
+    assert_eq!(make_initials("De Beers, Guido van Rossum"), "D.B.,G.v.R.");
+    assert_eq!(make_initials("Манфред фон Рихтгофен"), "М.ф.Р.");
+    assert_eq!(make_initials("Armand Jean du Plessis"), "A.J.d.P.");
+    assert_eq!(make_initials("Иржи Кропачек,, йозеф Новотный"), "И.К.,Й.Н.");
     assert_eq!(make_initials("Rory O'Connor"), "R.O'C.");
     assert_eq!(make_initials("Öwyn Do'Üwr"), "Ö.Do'Ü.");
     assert_eq!(make_initials("öwyn Do'üwr"), "Ö.D.");
     assert_eq!(make_initials("'"), "'.");
     assert_eq!(make_initials("Jason dinAlt"), "J.dinA.");
+    assert_eq!(make_initials("Jackie McGee"), "J.McG.");
+    assert_eq!(make_initials("Ross Macdonald"), "R.M.");
     assert_eq!(make_initials("DAMadar"), "DA.");
     assert_eq!(
         make_initials("johannes diderik van der waals"),
