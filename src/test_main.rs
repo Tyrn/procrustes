@@ -39,6 +39,10 @@ fn test_str_strip_numbers() {
 fn test_make_initials() {
     assert_eq!(make_initials(""), "");
     assert_eq!(make_initials(" "), "");
+    assert_eq!(make_initials(".. , .. "), "");
+    assert_eq!(make_initials(" ,, .,"), "");
+    assert_eq!(make_initials(", a. g, "), "A.G.");
+    assert_eq!(make_initials("- , -I.V.-A,E.C.N-, ."), "I.V-A.,E.C.N.");
     assert_eq!(make_initials("John ronald reuel Tolkien"), "J.R.R.T.");
     assert_eq!(make_initials("  e.B.Sledge "), "E.B.S.");
     assert_eq!(make_initials("Apsley Cherry-Garrard"), "A.C-G.");
@@ -53,8 +57,20 @@ fn test_make_initials() {
         make_initials("Harry \"Bing\" Crosby, Kris \"Tanto\" Paronto"),
         "H.C.,K.P."
     );
+    assert_eq!(
+        make_initials("William J. \"Wild Bill\" Donovan, Marta \"Cinta Gonzalez"),
+        "W.J.D.,M.C.G."
+    );
     assert_eq!(make_initials("a.s.,b.s."), "A.S.,B.S.");
     assert_eq!(make_initials("A. Strugatsky, B...Strugatsky."), "A.S.,B.S.");
+    assert_eq!(
+        make_initials("Язон динАльт, Шарль д'Артаньян"),
+        "Я.динА.,Ш.д'А."
+    );
+    assert_eq!(
+        make_initials("Charles de Batz de Castelmore d'Artagnan"),
+        "C.d.B.d.C.d'A."
+    );
     assert_eq!(make_initials("Иржи Кропачек, Йозеф Новотный"), "И.К.,Й.Н.");
     assert_eq!(make_initials("Rory O'Connor"), "R.O'C.");
     assert_eq!(make_initials("Öwyn Do'Üwr"), "Ö.Do'Ü.");

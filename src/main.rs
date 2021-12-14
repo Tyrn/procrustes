@@ -567,6 +567,11 @@ fn make_initials(authors: &str) -> String {
     lazy_static! {
         static ref SPACE: Regex = Regex::new(r"[\s.]+").unwrap();
         static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
+        static ref NOBILIARY_PARTICLES: [&'static str; 32] = [
+            "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "af", "аф", "of",
+            "из", "de", "де", "des", "дез", "del", "дель", "dos", "душ", "дос", "du", "дю", "la",
+            "ла", "ля", "le", "ле", "haut", "от",
+        ];
     }
 
     fn gv(s: &str) -> Vec<&str> {
@@ -577,6 +582,7 @@ fn make_initials(authors: &str) -> String {
         let cut: Vec<&str> = name.split("'").collect();
 
         if cut.len() > 1 && !cut[1].is_empty() {
+            // Deal with '.
             if cut[1].chars().next().unwrap().is_lowercase() && !cut[0].is_empty() {
                 return gv(cut[0])[0].to_uppercase();
             }
@@ -587,8 +593,8 @@ fn make_initials(authors: &str) -> String {
         let mut v_iter = v.iter();
 
         if v.len() > 1 {
-            let mut prefix: Vec<&str> = Vec::new();
-            prefix.push(v_iter.next().unwrap());
+            // Deal with prefixes.
+            let mut prefix: Vec<&str> = vec![*v_iter.next().unwrap()];
             for vch in v_iter {
                 prefix.push(vch);
                 if vch.chars().next().unwrap().is_uppercase() {
@@ -597,23 +603,17 @@ fn make_initials(authors: &str) -> String {
             }
         }
 
-        if [
-            "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "af", "аф", "of",
-            "из", "de", "де", "des", "дез", "del", "дель", "dos", "душ", "дос", "du", "дю", "la",
-            "ла", "ля", "le", "ле", "haut", "от",
-        ]
-        .iter()
-        .any(|&x| name == x)
-        {
-            return gv(name)[0].to_string();
+        if NOBILIARY_PARTICLES.iter().any(|&x| name == x) {
+            return v[0].to_string();
         }
 
-        gv(name)[0].to_uppercase()
+        v[0].to_uppercase()
     }
 
     join(
         NICKNAME
             .replace_all(authors, " ")
+            .replace("\"", " ")
             .split(",")
             .filter(|author| author.replace(".", "").replace("-", "").trim() != "")
             .map(|author| {
