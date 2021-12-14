@@ -56,8 +56,14 @@ fn test_make_initials() {
     assert_eq!(make_initials("a.s.,b.s."), "A.S.,B.S.");
     assert_eq!(make_initials("A. Strugatsky, B...Strugatsky."), "A.S.,B.S.");
     assert_eq!(make_initials("Иржи Кропачек, Йозеф Новотный"), "И.К.,Й.Н.");
-    assert_eq!(make_initials("österreich"), "Ö.");
     assert_eq!(make_initials("Rory O'Connor"), "R.O'C.");
-    assert_eq!(make_initials("Gwyn D'Üwr"), "G.D'Ü.");
-    assert_eq!(make_initials("Gwyn D'üwr"), "G.D.");
+    assert_eq!(make_initials("Öwyn Do'Üwr"), "Ö.Do'Ü.");
+    assert_eq!(make_initials("öwyn Do'üwr"), "Ö.D.");
+    assert_eq!(make_initials("'"), "'.");
+    assert_eq!(make_initials("Jason dinAlt"), "J.dinA.");
+    assert_eq!(make_initials("DAMadar"), "DA.");
+    assert_eq!(
+        make_initials("johannes diderik van der waals"),
+        "J.D.v.d.W."
+    );
 }

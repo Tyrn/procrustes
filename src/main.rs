@@ -566,7 +566,6 @@ fn str_strip_numbers(s: &str) -> Vec<i64> {
 fn make_initials(authors: &str) -> String {
     lazy_static! {
         static ref SPACE: Regex = Regex::new(r"[\s.]+").unwrap();
-        static ref HYPHEN: Regex = Regex::new(r"\s*(?:-\s*)+").unwrap();
         static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
     }
 
@@ -578,15 +577,38 @@ fn make_initials(authors: &str) -> String {
         let cut: Vec<&str> = name.split("'").collect();
 
         if cut.len() > 1 && !cut[1].is_empty() {
-           if gv(cut[1])[0].chars().next().unwrap().is_lowercase() && !cut[0].is_empty() {
-               return cut[0].to_uppercase()
-           }
-           return cut[0].to_owned() + "'" + &gv(cut[1])[0].to_uppercase()
+            if cut[1].chars().next().unwrap().is_lowercase() && !cut[0].is_empty() {
+                return gv(cut[0])[0].to_uppercase();
+            }
+            return cut[0].to_owned() + "'" + &gv(cut[1])[0];
         }
 
         let v = gv(name);
-        let i = v[0].to_uppercase() + &v[1..].concat();
-        gv(&i)[0].to_uppercase()
+        let mut v_iter = v.iter();
+
+        if v.len() > 1 {
+            let mut prefix: Vec<&str> = Vec::new();
+            prefix.push(v_iter.next().unwrap());
+            for vch in v_iter {
+                prefix.push(vch);
+                if vch.chars().next().unwrap().is_uppercase() {
+                    return prefix.concat();
+                }
+            }
+        }
+
+        if [
+            "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "af", "аф", "of",
+            "из", "de", "де", "des", "дез", "del", "дель", "dos", "душ", "дос", "du", "дю", "la",
+            "ла", "ля", "le", "ле", "haut", "от",
+        ]
+        .iter()
+        .any(|&x| name == x)
+        {
+            return gv(name)[0].to_string();
+        }
+
+        gv(name)[0].to_uppercase()
     }
 
     join(
