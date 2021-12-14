@@ -30,6 +30,7 @@ lazy_static! {
 //    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
     static ref DST: PathBuf = executive_dst();
+    static ref KNOWN_EXTENSIONS: [&'static str; 8] = ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE"];
     static ref INITIALS: String = if flag("a") {
         make_initials(sval("a"))
     } else {
@@ -526,7 +527,7 @@ fn main() {
 ///
 #[allow(dead_code)]
 fn one_for_audiofile_ext(path: &Path) -> usize {
-    ["MP3", "M4A", "M4B", "OGG", "WMA", "FLAC"]
+    KNOWN_EXTENSIONS
         .iter()
         .any(|ext| has_ext_of(path.to_str().unwrap(), ext)) as usize
 }
