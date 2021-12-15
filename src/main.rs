@@ -299,6 +299,9 @@ fn check_args() {
 }
 
 fn tracks_count(dir: &Path) -> usize {
+    if dir.is_file() {
+        return one_for_audiofile(dir);
+    }
     fs::read_dir(dir)
         .unwrap()
         .into_iter()
@@ -338,7 +341,7 @@ fn offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
 }
 
 fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
-    if one_for_audiofile(dir) > 0 {
+    if dir.is_file() && one_for_audiofile(dir) > 0 {
         return (vec![], vec![dir.to_path_buf()]);
     }
     let mut dirs = fs_entries(dir, true).unwrap();
