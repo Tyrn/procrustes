@@ -6,6 +6,7 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use itertools::join;
 use regex::Regex;
 use std::{
+    cmp,
     ffi::OsStr,
     fs, io,
     io::Write,
@@ -578,9 +579,40 @@ fn main() {
         " {} Done ({}, {}; {:.1}s).",
         DONE_ICON,
         count,
-        size,
+        human_fine(size),
         now.elapsed().as_secs_f64()
     );
+}
+
+fn human_fine(bytes: u64) -> String {
+    lazy_static! {
+        static ref UNIT_LIST: [(&'static str, i32); 6] = [
+            ("", 0),
+            ("kB", 0),
+            ("MB", 1),
+            ("GB", 2),
+            ("TB", 2),
+            ("PB", 2),
+        ];
+    }
+    let fb = bytes as f64;
+    if bytes > 1 {
+        let exponent = cmp::min(fb.log(1024.0) as i32, UNIT_LIST.len() as i32 - 1);
+        let quotient = fb / 1024.0_f64.powi(exponent);
+        return match UNIT_LIST[exponent as usize] {
+            (unit, 0) => format!("{:.0}{}", quotient, unit),
+            (unit, 1) => format!("{:.1}{}", quotient, unit),
+            (unit, 2) => format!("{:.2}{}", quotient, unit),
+            _ => panic!("Fatal error: human_fine(): unexpected decimals count."),
+        };
+    }
+    if bytes == 0 {
+        return "0".to_string();
+    }
+    if bytes == 1 {
+        return "1".to_string();
+    }
+    panic!("Fatal error: human_fine({}).", bytes)
 }
 
 /// Returns 1, if [path] has an audio file extension, otherwise 0.

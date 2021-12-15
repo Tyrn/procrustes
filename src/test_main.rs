@@ -36,6 +36,20 @@ fn test_str_strip_numbers() {
 }
 
 #[test]
+fn test_human_fine() {
+    assert_eq!(human_fine(0), "0");
+    assert_eq!(human_fine(1), "1");
+    assert_eq!(human_fine(42), "42");
+    assert_eq!(human_fine(1800), "2kB");
+    assert_eq!(human_fine(123456789), "117.7MB");
+    assert_eq!(human_fine(123456789123), "114.98GB");
+    assert_eq!(human_fine(1024), "1kB");
+    assert_eq!(human_fine(1024.0_f64.powi(2) as u64), "1.0MB");
+    assert_eq!(human_fine(1024.0_f64.powi(3) as u64), "1.00GB");
+    assert_eq!(human_fine(1024.0_f64.powi(4) as u64), "1.00TB");
+}
+
+#[test]
 fn test_make_initials() {
     assert_eq!(make_initials(""), "");
     assert_eq!(make_initials(" "), "");
