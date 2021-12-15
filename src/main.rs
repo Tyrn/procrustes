@@ -30,6 +30,12 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     \n\n<src> as a single file: \
     \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg .";
 
+const WARNING_ICON: &str = "\u{01f4a7}";
+// const INVALID_ICON: &str = "\u{00274c}";
+// const SUSPICIOUS_ICON: &str = "\u{002754}";
+const DONE_ICON: &str = "\u{01f7e2}";
+const COLUMN_ICON: &str = "\u{002714}";
+
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = retrieve_args();
 //    static ref IS_ALBUM: bool = is_album_tag();
@@ -267,11 +273,19 @@ fn check_args() {
     let (src, dst) = (pval("src"), pval("dst-dir"));
 
     if !src.exists() {
-        println!("Source directory \"{}\" is not there.", src.display());
+        println!(
+            " {} Source directory \"{}\" is not there.",
+            WARNING_ICON,
+            src.display()
+        );
         exit(0);
     }
     if !dst.exists() {
-        println!("Destination path \"{}\" is not there.", dst.display());
+        println!(
+            " {} Destination path \"{}\" is not there.",
+            WARNING_ICON,
+            dst.display()
+        );
         exit(0);
     }
     if !flag("p") && !flag("y") {
@@ -279,14 +293,16 @@ fn check_args() {
             if flag("w") {
                 fs::remove_dir_all(&DST.as_path()).expect(
                     format!(
-                        "Failed to remove destination directory \"{}\".",
+                        " {} Failed to remove destination directory \"{}\".",
+                        WARNING_ICON,
                         DST.display()
                     )
                     .as_str(),
                 );
             } else {
                 println!(
-                    "Destination directory \"{}\" already exists.",
+                    " {} Destination directory \"{}\" already exists.",
+                    WARNING_ICON,
                     DST.display()
                 );
                 exit(0);
@@ -294,7 +310,8 @@ fn check_args() {
         }
         fs::create_dir(&DST.as_path()).expect(
             format!(
-                "Destination directory \"{}\" already exists!",
+                " {} Destination directory \"{}\" already exists!",
+                WARNING_ICON,
                 DST.display()
             )
             .as_str(),
@@ -505,7 +522,14 @@ fn copy_album() {
         }
 
         if flag("v") {
-            println!("{:1$}/{2} {3}", ii, width, count, &dst.to_str().unwrap());
+            println!(
+                "{:1$}/{2} {3} {4}",
+                ii,
+                width,
+                count,
+                COLUMN_ICON,
+                &dst.to_str().unwrap()
+            );
         } else {
             print!(".");
             io::stdout().flush().unwrap();
@@ -532,9 +556,7 @@ fn copy_album() {
         copy(entry_num!(i), &src, &step);
     }
 
-    if !flag("v") {
-        println!(" Done ({}).", count);
-    }
+    println!(" {} Done ({}).", DONE_ICON, count);
 }
 
 fn main() {
