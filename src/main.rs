@@ -15,14 +15,20 @@ use std::{
 use taglib;
 use unicode_segmentation::UnicodeSegmentation;
 
-const APP_DESCRIPTION: &str = "A CLI utility for copying subtrees containing supported \
-     audio files in sequence, naturally sorted. \
-     The end result is a \"flattened\" copy of the source subtree. \"Flattened\" means \
-     that only a namesake of the root source directory is created, where all the files get \
-     copied to, names prefixed with a serial number. Tag \"Track Number\" \
-     is set, tags \"Title\", \"Artist\", and \"Album\" can be replaced optionally. \
-     The writing process is strictly sequential: either starting with the number one file, \
-     or in the reversed order. This can be important for some mobile devices.";
+const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
+    is a CLI utility for copying directories and subdirectories \
+    containing supported audio files in sequence, naturally sorted. \
+    The end result is a \"flattened\" copy of the source subtree. \"Flattened\" means \
+    that only a namesake of the root source directory is created, where all the files get \
+    copied to, names prefixed with a serial number. Tag \"Track Number\" \
+    is set, tags \"Title\", \"Artist\", and \"Album\" can be replaced optionally. \
+    The writing process is strictly sequential: either starting with the number one file, \
+    or in the reverse order. This can be important for some mobile devices. \
+    \n\nExamples; <src> as a directory: \
+    \n\nrobinson-crusoe $ procrustes -va 'Daniel \"Goldeneye\" Defoe' -m 'Robinson Crusoe' . \
+    /run/media/player \
+    \n\n<src> as a single file: \
+    \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg .";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = retrieve_args();
