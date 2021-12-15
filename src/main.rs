@@ -62,9 +62,9 @@ fn executive_dst() -> PathBuf {
         }
     );
     if flag("p") {
-        pval("dst")
+        pval("dst-dir")
     } else {
-        [pval("dst"), PathBuf::from(base_dst)].iter().collect()
+        [pval("dst-dir"), PathBuf::from(base_dst)].iter().collect()
     }
 }
 
@@ -105,105 +105,105 @@ fn pval(name: &str) -> PathBuf {
 }
 
 fn is_album_tag() -> bool {
-    if flag("u") && !flag("g") {
+    if flag("u") && !flag("m") {
         true
     } else {
-        flag("g")
+        flag("m")
     }
 }
 
 fn album_tag() -> &'static str {
-    if flag("u") && !flag("g") {
+    if flag("u") && !flag("m") {
         sval("u")
     } else {
-        sval("g")
+        sval("m")
     }
 }
 
 fn retrieve_args() -> ArgMatches<'static> {
     App::new("procrustes")
         .setting(AppSettings::ColoredHelp)
-        .version("v1.0.2")
+        .version("v1.0.3")
         .author("")
         .about(APP_DESCRIPTION)
         .arg(
             Arg::with_name("v")
                 .short("v")
                 .long("verbose")
-                .help("verbose output"),
+                .help("Verbose output"),
         )
         .arg(
             Arg::with_name("d")
                 .short("d")
                 .long("drop-tracknumber")
-                .help("do not set track numbers"),
+                .help("Do not set track numbers"),
         )
         .arg(
             Arg::with_name("s")
                 .short("s")
                 .long("strip-decorations")
-                .help("strip file and directory name decorations"),
+                .help("Strip file and directory name decorations"),
         )
         .arg(
             Arg::with_name("f")
                 .short("f")
                 .long("file-title")
-                .help("use file name for title tag"),
+                .help("Use file name for title tag"),
         )
         .arg(
             Arg::with_name("F")
                 .short("F")
                 .long("file-title-num")
-                .help("use numbered file name for title tag"),
+                .help("Use numbered file name for title tag"),
         )
         .arg(
             Arg::with_name("x")
                 .short("x")
                 .long("sort-lex")
-                .help("sort files lexicographically"),
+                .help("Sort files lexicographically"),
         )
         .arg(
             Arg::with_name("t")
                 .short("t")
                 .long("tree-dst")
-                .help("retain the tree structure of the source album at destination"),
+                .help("Retain the tree structure of the source album at destination"),
         )
         .arg(
             Arg::with_name("p")
                 .short("p")
                 .long("drop-dst")
-                .help("do not create destination directory"),
+                .help("Do not create destination directory"),
         )
         .arg(
             Arg::with_name("r")
                 .short("r")
                 .long("reverse")
-                .help("copy files in reverse order (number one file is the last to be copied)"),
+                .help("Copy files in reverse order (number one file is the last to be copied)"),
         )
         .arg(
             Arg::with_name("i")
                 .short("i")
                 .long("prepend-subdir-name")
-                .help("prepend current subdirectory name to a file name"),
+                .help("Prepend current subdirectory name to a file name"),
         )
         .arg(
             Arg::with_name("w")
                 .short("w")
                 .long("overwrite")
-                .help("silently remove existing destination directory (not recommended)"),
+                .help("Silently remove existing destination directory (not recommended)"),
         )
         .arg(
             Arg::with_name("y")
                 .short("y")
                 .long("dry-run")
-                .help("without actually copying the files"),
+                .help("Without actually copying the files (trumps -w, too)"),
         )
         .arg(
             Arg::with_name("e")
                 .short("e")
                 .long("file-type")
                 .value_name("EXT")
-                .help("accept only audio files of the specified type")
+                .help("Accept only audio files of the specified type")
                 .takes_value(true),
         )
         .arg(
@@ -225,28 +225,28 @@ fn retrieve_args() -> ArgMatches<'static> {
         .arg(
             Arg::with_name("a")
                 .short("a")
-                .long("artist-tag")
-                .value_name("ARTIST_TAG")
-                .help("artist tag name")
+                .long("artist")
+                .value_name("ARTIST")
+                .help("Artist tag")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("g")
-                .short("g")
-                .long("album-tag")
-                .value_name("ALBUM_TAG")
-                .help("album tag name")
+            Arg::with_name("m")
+                .short("m")
+                .long("album")
+                .value_name("ALBUM")
+                .help("Album tag")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("src")
-                .help("source directory")
+                .help("Source file or directory")
                 .required(true)
                 .index(1),
         )
         .arg(
-            Arg::with_name("dst")
-                .help("general destination directory")
+            Arg::with_name("dst-dir")
+                .help("Destination directory")
                 .required(true)
                 .index(2),
         )
@@ -254,7 +254,7 @@ fn retrieve_args() -> ArgMatches<'static> {
 }
 
 fn check_args() {
-    let (src, dst) = (pval("src"), pval("dst"));
+    let (src, dst) = (pval("src"), pval("dst-dir"));
 
     if !src.exists() {
         println!("Source directory \"{}\" is not there.", src.display());
