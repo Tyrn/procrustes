@@ -320,23 +320,35 @@ fn check_args() {
     }
 }
 
-fn tracks_count(dir: &Path) -> usize {
+fn tracks_count(dir: &Path) -> (usize, u64) {
     if dir.is_file() {
-        return one_for_audiofile(dir);
+        if one_for_audiofile(dir) > 0 {
+            return (1, dir.metadata().unwrap().len());
+        }
+        return (0, 0);
     }
-    fs::read_dir(dir)
+    let mut sum = 0;
+    let cnt = fs::read_dir(dir)
         .unwrap()
         .into_iter()
         .filter(|r| r.is_ok())
         .map(|r| {
             let p = r.unwrap().path();
             if p.is_dir() {
-                tracks_count(&p)
+                let rv = tracks_count(&p);
+                sum += rv.1;
+                rv.0
             } else {
-                one_for_audiofile(&p)
+                if one_for_audiofile(&p) > 0 {
+                    sum += &p.metadata().unwrap().len();
+                    1
+                } else {
+                    0
+                }
             }
         })
-        .sum()
+        .sum();
+    (cnt, sum)
 }
 
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
@@ -558,11 +570,17 @@ fn copy_album(count: usize) {
 fn main() {
     check_args();
     let now = Instant::now();
-    let count = tracks_count(&SRC.as_path());
+    let (count, size) = tracks_count(&SRC.as_path());
 
     copy_album(count);
 
-    println!(" {} Done ({}; {:.1}s).", DONE_ICON, count, now.elapsed().as_secs_f64());
+    println!(
+        " {} Done ({}, {}; {:.1}s).",
+        DONE_ICON,
+        count,
+        size,
+        now.elapsed().as_secs_f64()
+    );
 }
 
 /// Returns 1, if [path] has an audio file extension, otherwise 0.
