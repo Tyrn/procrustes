@@ -338,6 +338,9 @@ fn offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
 }
 
 fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    if one_for_audiofile(dir) > 0 {
+        return (vec![], vec![dir.to_path_buf()]);
+    }
     let mut dirs = fs_entries(dir, true).unwrap();
     let mut files = fs_entries(dir, false).unwrap();
     if flag("x") {
