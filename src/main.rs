@@ -59,12 +59,16 @@ fn executive_dst() -> PathBuf {
         if flag("u") {
             format!("{}{}", artist(false), sval("u"))
         } else {
-            pval("src")
-                .file_name()
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .to_string()
+            let src = pval("src");
+            if src.is_file() {
+                src.file_stem()
+            } else {
+                src.file_name()
+            }
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
         }
     );
     if flag("p") {
