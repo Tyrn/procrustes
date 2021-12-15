@@ -11,6 +11,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     process::exit,
+    time::Instant,
 };
 use taglib;
 use unicode_segmentation::UnicodeSegmentation;
@@ -410,10 +411,7 @@ fn traverse_dir(
     }
 }
 
-fn copy_album() {
-    check_args();
-
-    let count = tracks_count(&SRC.as_path());
+fn copy_album(count: usize) {
     if count < 1 {
         println!("No audio files found at \"{}\"", SRC.display());
         exit(0);
@@ -555,12 +553,16 @@ fn copy_album() {
     for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
         copy(entry_num!(i), &src, &step);
     }
-
-    println!(" {} Done ({}).", DONE_ICON, count);
 }
 
 fn main() {
-    copy_album();
+    check_args();
+    let now = Instant::now();
+    let count = tracks_count(&SRC.as_path());
+
+    copy_album(count);
+
+    println!(" {} Done ({}; {:.1}s).", DONE_ICON, count, now.elapsed().as_secs_f64());
 }
 
 /// Returns 1, if [path] has an audio file extension, otherwise 0.
