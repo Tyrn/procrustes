@@ -205,6 +205,12 @@ fn retrieve_args() -> ArgMatches<'static> {
                 .help("Prepend current subdirectory name to a file name"),
         )
         .arg(
+            Arg::with_name("c")
+                .short("c")
+                .long("count")
+                .help("Just count the files"),
+        )
+        .arg(
             Arg::with_name("w")
                 .short("w")
                 .long("overwrite")
@@ -280,7 +286,7 @@ fn check_args() {
             WARNING_ICON,
             src.display()
         );
-        exit(0);
+        exit(1);
     }
     if !dst.exists() {
         println!(
@@ -288,7 +294,7 @@ fn check_args() {
             WARNING_ICON,
             dst.display()
         );
-        exit(0);
+        exit(1);
     }
     if !flag("p") && !flag("y") {
         if DST_DIR.exists() {
@@ -307,7 +313,7 @@ fn check_args() {
                     WARNING_ICON,
                     DST_DIR.display()
                 );
-                exit(0);
+                exit(1);
             }
         }
         fs::create_dir(&DST_DIR.as_path()).expect(
@@ -430,7 +436,7 @@ fn traverse_dir(
 fn copy_album(count: usize) {
     if count < 1 {
         println!("No audio files found at \"{}\"", SRC.display());
-        exit(0);
+        exit(1);
     }
     let width = format!("{}", count).len();
 
@@ -482,8 +488,9 @@ fn copy_album(count: usize) {
             let dst_dir = DST_DIR.join(&depth);
             fs::create_dir_all(&dst_dir).expect(
                 format!(
-                    "Error while creating \"{}\" directory.",
-                    &dst_dir.to_str().unwrap()
+                    " {} Error while creating \"{}\" directory.",
+                    WARNING_ICON,
+                    &dst_dir.to_str().unwrap(),
                 )
                 .as_str(),
             );
@@ -493,13 +500,19 @@ fn copy_album(count: usize) {
         // All the copying and tagging happens here.
         if !flag("y") {
             fs::copy(&src, &dst).expect(
-                format!("Error while copying \"{}\" file.", &dst.to_str().unwrap()).as_str(),
+                format!(
+                    " {} Error while copying \"{}\" file.",
+                    WARNING_ICON,
+                    &dst.to_str().unwrap()
+                )
+                .as_str(),
             );
 
             let tag_file = taglib::File::new(&dst).expect(
                 format!(
-                    "Error while opening \"{}\" for tagging.",
-                    &dst.to_str().unwrap()
+                    " {} Error while opening \"{}\" for tagging.",
+                    WARNING_ICON,
+                    &dst.to_str().unwrap(),
                 )
                 .as_str(),
             );
