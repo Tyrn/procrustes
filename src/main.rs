@@ -277,8 +277,8 @@ fn retrieve_args() -> ArgMatches<'static> {
         .get_matches()
 }
 
-fn check_args() {
-    let (src, dst) = (pval("src"), pval("dst-dir"));
+fn check_src() {
+    let src = pval("src");
 
     if !src.exists() {
         println!(
@@ -288,6 +288,11 @@ fn check_args() {
         );
         exit(1);
     }
+}
+
+fn check_dst() {
+    let dst = pval("dst-dir");
+
     if !dst.exists() {
         println!(
             " {} Destination path \"{}\" is not there.",
@@ -400,10 +405,13 @@ fn traverse_dir(
 }
 
 fn copy_album(count: usize) {
+    check_dst();
+
     if count < 1 {
         println!("No audio files found at \"{}\"", SRC.display());
         exit(1);
     }
+
     let width = format!("{}", count).len();
 
     // Extracts file name from [src] and makes it pretty, if necessary.
@@ -602,7 +610,7 @@ impl GlobalState {
 }
 
 fn main() {
-    check_args();
+    check_src();
 
     let mut g = GlobalState {
         now: Instant::now(),

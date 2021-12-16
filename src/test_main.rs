@@ -6,20 +6,11 @@ fn test_pad() {
 }
 
 #[test]
-fn test_one_for_audiofile_ext() {
-    assert_eq!(
-        one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie.ogg")),
-        1
-    );
-    assert_eq!(
-        one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie.MP3")),
-        1
-    );
-    assert_eq!(
-        one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie.pdf")),
-        0
-    );
-    assert_eq!(one_for_audiofile_ext(Path::new("/alfa/bra.vo/charlie")), 0);
+fn test_is_audiofile_ext() {
+    assert!(is_audiofile_ext(Path::new("/alfa/bra.vo/charlie.ogg")));
+    assert!(is_audiofile_ext(Path::new("/alfa/bra.vo/charlie.MP3")));
+    assert!(!is_audiofile_ext(Path::new("/alfa/bra.vo/charlie.pdf")));
+    assert!(!is_audiofile_ext(Path::new("/alfa/bra.vo/charlie")));
 }
 
 #[test]
