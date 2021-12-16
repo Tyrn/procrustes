@@ -6,6 +6,21 @@ fn test_pad() {
 }
 
 #[test]
+fn test_std_path() {
+    let a1 = PathBuf::from(format!("{}{}{}", "alfa", MAIN_SEPARATOR, "bravo"));
+    let a11 = PathBuf::from("alfa".to_owned() + &MAIN_SEPARATOR.to_string() + "bravo");
+    let a2: PathBuf = [PathBuf::from("alfa"), PathBuf::from("bravo")]
+        .iter()
+        .collect();
+    let mut a3 = PathBuf::from("alfa");
+    a3.push("bravo");
+
+    assert_eq!(a1, a11);
+    assert_eq!(a1, a2);
+    assert_eq!(a1, a3);
+}
+
+#[test]
 fn test_is_audiofile_ext() {
     assert!(is_audiofile_ext(Path::new("charlie.ogg")));
     assert!(is_audiofile_ext(Path::new("charlie.MP3")));
