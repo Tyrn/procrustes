@@ -327,40 +327,6 @@ fn check_args() {
     }
 }
 
-fn tracks_count(dir: &Path) -> (usize, u64) {
-    if dir.is_file() {
-        if is_audiofile(dir) {
-            return (1, dir.metadata().unwrap().len());
-        }
-        return (0, 0);
-    }
-
-    let mut bytes = 0;
-
-    let tracks = fs::read_dir(dir)
-        .unwrap()
-        .into_iter()
-        .filter(|r| r.is_ok())
-        .map(|r| {
-            let p = r.unwrap().path();
-            if p.is_dir() {
-                let count = tracks_count(&p);
-                bytes += count.1;
-                count.0
-            } else {
-                if is_audiofile(&p) {
-                    bytes += &p.metadata().unwrap().len();
-                    1
-                } else {
-                    0
-                }
-            }
-        })
-        .sum();
-
-    (tracks, bytes)
-}
-
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
         .into_iter()
@@ -584,19 +550,77 @@ fn copy_album(count: usize) {
     }
 }
 
+struct GlobalState {
+    pub now: Instant,
+    pub invalid_total: usize,
+    pub tracks_total: usize,
+    pub bytes_total: u64,
+}
+
+impl GlobalState {
+    fn tracks_count(&mut self, dir: &Path) -> (usize, u64) {
+        if dir.is_file() {
+            if is_audiofile(dir) {
+                return (1, dir.metadata().unwrap().len());
+            }
+            return (0, 0);
+        }
+
+        let mut bytes = 0;
+
+        let tracks = fs::read_dir(dir)
+            .unwrap()
+            .into_iter()
+            .filter(|r| r.is_ok())
+            .map(|r| {
+                let p = r.unwrap().path();
+                if p.is_dir() {
+                    let count = self.tracks_count(&p);
+                    bytes += count.1;
+                    count.0
+                } else {
+                    if is_audiofile(&p) {
+                        bytes += &p.metadata().unwrap().len();
+                        1
+                    } else {
+                        if is_audiofile_ext(&p) {
+                            self.invalid_total += 1;
+                        }
+                        0
+                    }
+                }
+            })
+            .sum();
+
+        (tracks, bytes)
+    }
+    fn set_tracks_info(&mut self, dir: &Path) {
+        let count = self.tracks_count(dir);
+        self.tracks_total = count.0;
+        self.bytes_total = count.1;
+    }
+}
+
 fn main() {
     check_args();
-    let now = Instant::now();
-    let (count, size) = tracks_count(&SRC.as_path());
 
-    copy_album(count);
+    let mut g = GlobalState {
+        now: Instant::now(),
+        invalid_total: 0,
+        tracks_total: 0,
+        bytes_total: 0,
+    };
+
+    g.set_tracks_info(&SRC.as_path());
+
+    copy_album(g.tracks_total);
 
     println!(
         " {} Done ({}, {}; {:.1}s).",
         DONE_ICON,
-        count,
-        human_fine(size),
-        now.elapsed().as_secs_f64()
+        g.tracks_total,
+        human_fine(g.bytes_total),
+        g.now.elapsed().as_secs_f64()
     );
 }
 
