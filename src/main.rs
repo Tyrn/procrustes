@@ -631,13 +631,13 @@ fn human_fine(bytes: u64) -> String {
     panic!("Fatal error: human_fine({}).", bytes)
 }
 
-/// Returns 1, if [path] has an audio file extension, otherwise 0.
+/// Returns true, if [path] has an audio file extension, otherwise false.
 ///
 #[allow(dead_code)]
-fn one_for_audiofile_ext(path: &Path) -> usize {
+fn is_audiofile_ext(path: &Path) -> bool {
     KNOWN_EXTENSIONS
         .iter()
-        .any(|ext| has_ext_of(path.to_str().unwrap(), ext)) as usize
+        .any(|ext| has_ext_of(path.to_str().unwrap(), ext))
 }
 
 /// Returns true, if [path] is a valid audio file, otherwise false.
