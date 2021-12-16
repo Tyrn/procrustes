@@ -43,7 +43,7 @@ lazy_static! {
 //    static ref IS_ALBUM: bool = is_album_tag();
 //    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
-    static ref DST: PathBuf = executive_dst();
+    static ref DST_DIR: PathBuf = executive_dst();
     static ref KNOWN_EXTENSIONS: [&'static str; 8] = [
         "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE",
     ];
@@ -291,13 +291,13 @@ fn check_args() {
         exit(0);
     }
     if !flag("p") && !flag("y") {
-        if DST.exists() {
+        if DST_DIR.exists() {
             if flag("w") {
-                fs::remove_dir_all(&DST.as_path()).expect(
+                fs::remove_dir_all(&DST_DIR.as_path()).expect(
                     format!(
                         " {} Failed to remove destination directory \"{}\".",
                         WARNING_ICON,
-                        DST.display()
+                        DST_DIR.display()
                     )
                     .as_str(),
                 );
@@ -305,16 +305,16 @@ fn check_args() {
                 println!(
                     " {} Destination directory \"{}\" already exists.",
                     WARNING_ICON,
-                    DST.display()
+                    DST_DIR.display()
                 );
                 exit(0);
             }
         }
-        fs::create_dir(&DST.as_path()).expect(
+        fs::create_dir(&DST_DIR.as_path()).expect(
             format!(
                 " {} Destination directory \"{}\" already exists!",
                 WARNING_ICON,
-                DST.display()
+                DST_DIR.display()
             )
             .as_str(),
         );
@@ -323,25 +323,27 @@ fn check_args() {
 
 fn tracks_count(dir: &Path) -> (usize, u64) {
     if dir.is_file() {
-        if one_for_audiofile(dir) > 0 {
+        if is_audiofile(dir) {
             return (1, dir.metadata().unwrap().len());
         }
         return (0, 0);
     }
-    let mut sum = 0;
-    let cnt = fs::read_dir(dir)
+
+    let mut bytes = 0;
+
+    let tracks = fs::read_dir(dir)
         .unwrap()
         .into_iter()
         .filter(|r| r.is_ok())
         .map(|r| {
             let p = r.unwrap().path();
             if p.is_dir() {
-                let rv = tracks_count(&p);
-                sum += rv.1;
-                rv.0
+                let count = tracks_count(&p);
+                bytes += count.1;
+                count.0
             } else {
-                if one_for_audiofile(&p) > 0 {
-                    sum += &p.metadata().unwrap().len();
+                if is_audiofile(&p) {
+                    bytes += &p.metadata().unwrap().len();
                     1
                 } else {
                     0
@@ -349,7 +351,8 @@ fn tracks_count(dir: &Path) -> (usize, u64) {
             }
         })
         .sum();
-    (cnt, sum)
+
+    (tracks, bytes)
 }
 
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
@@ -361,7 +364,7 @@ fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
             if folders {
                 r.is_dir()
             } else {
-                one_for_audiofile(&r) > 0
+                is_audiofile(&r)
             }
         })
         .collect())
@@ -376,7 +379,7 @@ fn offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
 }
 
 fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
-    if dir.is_file() && one_for_audiofile(dir) > 0 {
+    if dir.is_file() && is_audiofile(dir) {
         return (vec![], vec![dir.to_path_buf()]);
     }
     let mut dirs = fs_entries(dir, true).unwrap();
@@ -476,7 +479,7 @@ fn copy_album(count: usize) {
             PathBuf::new()
         };
         if flag("t") && !flag("y") {
-            let dst_dir = DST.join(&depth);
+            let dst_dir = DST_DIR.join(&depth);
             fs::create_dir_all(&dst_dir).expect(
                 format!(
                     "Error while creating \"{}\" directory.",
@@ -485,7 +488,7 @@ fn copy_album(count: usize) {
                 .as_str(),
             );
         }
-        let dst = DST.join(&depth).join(&file_name);
+        let dst = DST_DIR.join(&depth).join(&file_name);
 
         // All the copying and tagging happens here.
         if !flag("y") {
@@ -624,14 +627,14 @@ fn one_for_audiofile_ext(path: &Path) -> usize {
         .any(|ext| has_ext_of(path.to_str().unwrap(), ext)) as usize
 }
 
-/// Returns 1, if [path] is a valid audio file, otherwise 0.
+/// Returns true, if [path] is a valid audio file, otherwise false.
 ///
-fn one_for_audiofile(path: &Path) -> usize {
+fn is_audiofile(path: &Path) -> bool {
     match taglib::File::new(path) {
-        Err(_) => 0,
+        Err(_) => false,
         Ok(v) => match v.tag() {
-            Err(_) => 0,
-            Ok(_) => 1,
+            Err(_) => false,
+            Ok(_) => true,
         },
     }
 }
