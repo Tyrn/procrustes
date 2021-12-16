@@ -34,7 +34,7 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg .";
 
 const WARNING_ICON: &str = "\u{01f4a7}";
-// const INVALID_ICON: &str = "\u{00274c}";
+const INVALID_ICON: &str = "\u{00274c}";
 // const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
 const COLUMN_ICON: &str = "\u{002714}";
@@ -405,7 +405,7 @@ fn traverse_dir(
     }
 }
 
-fn copy_album(count: usize) {
+fn copy_album(count: u64) {
     check_dst();
 
     if count < 1 {
@@ -555,19 +555,19 @@ fn copy_album(count: usize) {
     }
 
     for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-        copy(entry_num!(i), &src, &step);
+        copy(entry_num!(i as u64), &src, &step);
     }
 }
 
 struct GlobalState {
     pub now: Instant,
-    pub invalid_total: usize,
-    pub tracks_total: usize,
+    pub invalid_total: u64,
+    pub tracks_total: u64,
     pub bytes_total: u64,
 }
 
 impl GlobalState {
-    fn tracks_count(&mut self, dir: &Path) -> (usize, u64) {
+    fn tracks_count(&mut self, dir: &Path) -> (u64, u64) {
         if dir.is_file() {
             if is_audiofile(dir) {
                 return (1, dir.metadata().unwrap().len());
@@ -624,7 +624,7 @@ fn main() {
 
     if flag("c") {
         print!(
-            " {} {} {}",
+            " {} Valid: {} file(s); Volume: {}",
             if g.tracks_total > 0 {
                 DONE_ICON
             } else {
@@ -634,9 +634,9 @@ fn main() {
             human_fine(g.bytes_total)
         );
         if g.tracks_total > 1 {
-            print!("{}", human_fine(g.bytes_total / g.tracks_total));
+            print!("; Average: {}", human_fine(g.bytes_total / g.tracks_total));
         }
-        println!("{:.1}s", g.now.elapsed().as_secs_f64())
+        println!("; Time: {:.1}s", g.now.elapsed().as_secs_f64())
     } else {
         copy_album(g.tracks_total);
 
@@ -647,6 +647,9 @@ fn main() {
             human_fine(g.bytes_total),
             g.now.elapsed().as_secs_f64()
         );
+    }
+    if g.invalid_total > 0 {
+        println!(" {} Broken: {} file(s)", INVALID_ICON, g.invalid_total);
     }
 }
 
