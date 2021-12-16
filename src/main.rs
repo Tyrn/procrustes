@@ -10,7 +10,7 @@ use std::{
     ffi::OsStr,
     fs, io,
     io::Write,
-    path::{Path, PathBuf, MAIN_SEPARATOR},
+    path::{Path, PathBuf},
     process::exit,
     time::Instant,
 };

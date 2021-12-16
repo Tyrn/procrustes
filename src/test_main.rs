@@ -7,8 +7,9 @@ fn test_pad() {
 
 #[test]
 fn test_std_path() {
-    let a1 = PathBuf::from(format!("{}{}{}", "alfa", MAIN_SEPARATOR, "bravo"));
-    let a11 = PathBuf::from("alfa".to_owned() + &MAIN_SEPARATOR.to_string() + "bravo");
+    let sep = std::path::MAIN_SEPARATOR;
+    let a1 = PathBuf::from(format!("{}{}{}", "alfa", sep, "bravo"));
+    let a11 = PathBuf::from("alfa".to_owned() + &sep.to_string() + "bravo");
     let a2: PathBuf = [PathBuf::from("alfa"), PathBuf::from("bravo")]
         .iter()
         .collect();
