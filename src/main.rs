@@ -26,6 +26,7 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     is set, tags \"Title\", \"Artist\", and \"Album\" can be replaced optionally. \
     The writing process is strictly sequential: either starting with the number one file, \
     or in the reverse order. This can be important for some mobile devices. \
+    \u{00274c} Broken media. \
     \n\nExamples; <src> as a directory: \
     \n\nrobinson-crusoe $ procrustes -va 'Daniel \"Goldeneye\" Defoe' -m 'Robinson Crusoe' . \
     /run/media/player \
@@ -621,15 +622,32 @@ fn main() {
 
     g.set_tracks_info(&SRC.as_path());
 
-    copy_album(g.tracks_total);
+    if flag("c") {
+        print!(
+            " {} {} {}",
+            if g.tracks_total > 0 {
+                DONE_ICON
+            } else {
+                WARNING_ICON
+            },
+            g.tracks_total,
+            human_fine(g.bytes_total)
+        );
+        if g.tracks_total > 1 {
+            print!("{}", human_fine(g.bytes_total / g.tracks_total));
+        }
+        println!("{:.1}s", g.now.elapsed().as_secs_f64())
+    } else {
+        copy_album(g.tracks_total);
 
-    println!(
-        " {} Done ({}, {}; {:.1}s).",
-        DONE_ICON,
-        g.tracks_total,
-        human_fine(g.bytes_total),
-        g.now.elapsed().as_secs_f64()
-    );
+        println!(
+            " {} Done ({}, {}; {:.1}s).",
+            DONE_ICON,
+            g.tracks_total,
+            human_fine(g.bytes_total),
+            g.now.elapsed().as_secs_f64()
+        );
+    }
 }
 
 fn human_fine(bytes: u64) -> String {
