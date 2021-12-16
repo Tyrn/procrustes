@@ -7,17 +7,17 @@ fn test_pad() {
 
 #[test]
 fn test_is_audiofile_ext() {
-    assert!(is_audiofile_ext(Path::new("/alfa/bra.vo/charlie.ogg")));
-    assert!(is_audiofile_ext(Path::new("/alfa/bra.vo/charlie.MP3")));
-    assert!(!is_audiofile_ext(Path::new("/alfa/bra.vo/charlie.pdf")));
-    assert!(!is_audiofile_ext(Path::new("/alfa/bra.vo/charlie")));
+    assert!(is_audiofile_ext(Path::new("charlie.ogg")));
+    assert!(is_audiofile_ext(Path::new("charlie.MP3")));
+    assert!(!is_audiofile_ext(Path::new("charlie.pdf")));
+    assert!(!is_audiofile_ext(Path::new("charlie")));
 }
 
 #[test]
 fn test_has_ext_of() {
-    assert_eq!(has_ext_of("/alfa/bra.vo/charlie.ogg", "OGG"), true);
-    assert_eq!(has_ext_of("/alfa/bra.vo/charlie.ogg", ".ogg"), true);
-    assert_eq!(has_ext_of("/alfa/bra.vo/charlie.ogg", "mp3"), false);
+    assert_eq!(has_ext_of("charlie.ogg", "OGG"), true);
+    assert_eq!(has_ext_of("charlie.ogg", ".ogg"), true);
+    assert_eq!(has_ext_of("charlie.ogg", "mp3"), false);
 }
 
 #[test]
