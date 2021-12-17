@@ -598,7 +598,7 @@ impl GlobalState {
                         bytes += &p.metadata().unwrap().len();
                         1
                     } else {
-                        if is_audiofile_ext(&p) {
+                        if is_pattern_ok(&p) && is_audiofile_ext(&p) {
                             self.suspicious_total += 1;
                             self.log(format!(" {} {}", SUSPICIOUS_ICON, file_name))
                         }
@@ -718,15 +718,19 @@ fn human_fine(bytes: u64) -> String {
     panic!("Fatal error: human_fine({}).", bytes)
 }
 
-/// Returns true, if [path] has an audio file extension, otherwise false.
-///
-fn is_audiofile_ext(path: &Path) -> bool {
+fn is_pattern_ok(path: &Path) -> bool {
     if flag("e") {
         let pattern = glob::Pattern::new(sval("e")).unwrap();
         if !pattern.matches(path.file_name().unwrap().to_str().unwrap()) {
             return false;
         }
-    }
+    };
+    true
+}
+
+/// Returns true, if [path] has an audio file extension, otherwise false.
+///
+fn is_audiofile_ext(path: &Path) -> bool {
     KNOWN_EXTENSIONS
         .iter()
         .any(|ext| has_ext_of(path.to_str().unwrap(), ext))
@@ -735,11 +739,8 @@ fn is_audiofile_ext(path: &Path) -> bool {
 /// Returns true, if [path] is a valid audio file, otherwise false.
 ///
 fn is_audiofile(path: &Path) -> bool {
-    if flag("e") {
-        let pattern = glob::Pattern::new(sval("e")).unwrap();
-        if !pattern.matches(path.file_name().unwrap().to_str().unwrap()) {
-            return false;
-        }
+    if !is_pattern_ok(path) {
+        return false;
     }
     match taglib::File::new(path) {
         Err(_) => false,
