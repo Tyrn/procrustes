@@ -3,6 +3,7 @@ extern crate lazy_static;
 
 use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
+use glob;
 use itertools::join;
 use regex::Regex;
 use spinners::{Spinner, Spinners};
@@ -230,7 +231,7 @@ fn retrieve_args() -> ArgMatches<'static> {
                 .short("e")
                 .long("file-type")
                 .value_name("EXT")
-                .help("Accept only audio files of the specified type")
+                .help("Accept only audio files of the specified type (e.g. -e '*kb.mp3'")
                 .takes_value(true),
         )
         .arg(
@@ -609,6 +610,7 @@ impl GlobalState {
 
         (tracks, bytes)
     }
+
     fn set_tracks_info(&mut self, dir: &Path) {
         let count = self.tracks_count(dir);
         self.tracks_total = count.0;
@@ -718,8 +720,13 @@ fn human_fine(bytes: u64) -> String {
 
 /// Returns true, if [path] has an audio file extension, otherwise false.
 ///
-#[allow(dead_code)]
 fn is_audiofile_ext(path: &Path) -> bool {
+    if flag("e") {
+        let pattern = glob::Pattern::new(sval("e")).unwrap();
+        if !pattern.matches(path.file_name().unwrap().to_str().unwrap()) {
+            return false;
+        }
+    }
     KNOWN_EXTENSIONS
         .iter()
         .any(|ext| has_ext_of(path.to_str().unwrap(), ext))
@@ -728,6 +735,12 @@ fn is_audiofile_ext(path: &Path) -> bool {
 /// Returns true, if [path] is a valid audio file, otherwise false.
 ///
 fn is_audiofile(path: &Path) -> bool {
+    if flag("e") {
+        let pattern = glob::Pattern::new(sval("e")).unwrap();
+        if !pattern.matches(path.file_name().unwrap().to_str().unwrap()) {
+            return false;
+        }
+    }
     match taglib::File::new(path) {
         Err(_) => false,
         Ok(v) => match v.tag() {
