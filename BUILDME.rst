@@ -7,6 +7,7 @@ Development
 ===========
 
 - `Format Rust code <https://github.com/rust-lang/rustfmt>`__
+- `Dealing with spinners <https://users.rust-lang.org/t/compilation-partially-moved-due-to-this-method-call/68972>`__
 
 Build
 -----
