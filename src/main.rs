@@ -5,7 +5,6 @@ use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use itertools::join;
 use regex::Regex;
-use spinners;
 use spinners::{Spinner, Spinners};
 use std::{
     cmp,
@@ -28,7 +27,7 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     is set, tags \"Title\", \"Artist\", and \"Album\" can be replaced optionally. \
     The writing process is strictly sequential: either starting with the number one file, \
     or in the reverse order. This can be important for some mobile devices. \
-    \u{00274c} Broken media. \
+    \u{002754} Suspicious media. \
     \n\nExamples; <src> as a directory: \
     \n\nrobinson-crusoe $ procrustes -va 'Daniel \"Goldeneye\" Defoe' -m 'Robinson Crusoe' . \
     /run/media/player \
@@ -36,8 +35,9 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg .";
 
 const WARNING_ICON: &str = "\u{01f4a7}";
-const INVALID_ICON: &str = "\u{00274c}";
-// const SUSPICIOUS_ICON: &str = "\u{002754}";
+const BDELIM_ICON: &str = "\u{01f539}";
+// const INVALID_ICON: &str = "\u{00274c}";
+const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
 const COLUMN_ICON: &str = "\u{002714}";
 
@@ -561,14 +561,6 @@ fn copy_album(count: u64) {
     }
 }
 
-struct GlobalState {
-    pub now: Instant,
-    pub spinner: Spinner,
-    pub invalid_total: u64,
-    pub tracks_total: u64,
-    pub bytes_total: u64,
-}
-
 impl GlobalState {
     fn tracks_count(&mut self, dir: &Path) -> (u64, u64) {
         if dir.is_file() {
@@ -591,12 +583,17 @@ impl GlobalState {
                     bytes += count.1;
                     count.0
                 } else {
+                    let file_name =
+                        String::from(&p.file_name().unwrap().to_str().unwrap().to_string());
+
                     if is_audiofile(&p) {
+                        self.spinner.message(file_name + BDELIM_ICON);
                         bytes += &p.metadata().unwrap().len();
                         1
                     } else {
                         if is_audiofile_ext(&p) {
-                            self.invalid_total += 1;
+                            self.suspicious_total += 1;
+                            self.log(format!(" {} {}", SUSPICIOUS_ICON, file_name))
                         }
                         0
                     }
@@ -611,6 +608,19 @@ impl GlobalState {
         self.tracks_total = count.0;
         self.bytes_total = count.1;
     }
+
+    fn log(&mut self, entry: String) {
+        self.log.push(entry);
+    }
+}
+
+struct GlobalState {
+    pub now: Instant,
+    pub spinner: Spinner,
+    pub log: Vec<String>,
+    pub suspicious_total: u64,
+    pub tracks_total: u64,
+    pub bytes_total: u64,
 }
 
 fn main() {
@@ -618,8 +628,9 @@ fn main() {
 
     let mut g = GlobalState {
         now: Instant::now(),
-        spinner: Spinner::new(&Spinners::Dots9, "Waiting for 3 seconds".into()),
-        invalid_total: 0,
+        log: Vec::new(),
+        spinner: Spinner::new(&Spinners::Moon, "".into()),
+        suspicious_total: 0,
         tracks_total: 0,
         bytes_total: 0,
     };
@@ -627,6 +638,7 @@ fn main() {
     g.set_tracks_info(&SRC.as_path());
 
     g.spinner.stop();
+    println!("");
 
     if flag("c") {
         print!(
@@ -654,8 +666,14 @@ fn main() {
             g.now.elapsed().as_secs_f64()
         );
     }
-    if g.invalid_total > 0 {
-        println!(" {} Broken: {} file(s)", INVALID_ICON, g.invalid_total);
+    if g.suspicious_total > 0 {
+        println!(
+            " {} Suspicious: {} file(s)",
+            SUSPICIOUS_ICON, g.suspicious_total
+        );
+    }
+    for s in g.log {
+        println!("{}", s);
     }
 }
 
