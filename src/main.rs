@@ -231,7 +231,7 @@ fn retrieve_args() -> ArgMatches<'static> {
                 .short("e")
                 .long("file-type")
                 .value_name("EXT")
-                .help("Accept only audio files of the specified type (e.g. -e '*kb.mp3'")
+                .help("Accept only audio files of the specified type (e.g. -e '*kb.mp3')")
                 .takes_value(true),
         )
         .arg(
