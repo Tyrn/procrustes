@@ -14,3 +14,5 @@ unicode-segmentation = "1.8.0"
 alphanumeric-sort = "1.4.3"
 clap = "~2.34"
 taglib = "*"
+spinners = "2.0.0"
+

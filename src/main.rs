@@ -5,6 +5,8 @@ use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use itertools::join;
 use regex::Regex;
+use spinners;
+use spinners::{Spinner, Spinners};
 use std::{
     cmp,
     ffi::OsStr,
@@ -561,6 +563,7 @@ fn copy_album(count: u64) {
 
 struct GlobalState {
     pub now: Instant,
+    pub spinner: Spinner,
     pub invalid_total: u64,
     pub tracks_total: u64,
     pub bytes_total: u64,
@@ -615,12 +618,15 @@ fn main() {
 
     let mut g = GlobalState {
         now: Instant::now(),
+        spinner: Spinner::new(&Spinners::Dots9, "Waiting for 3 seconds".into()),
         invalid_total: 0,
         tracks_total: 0,
         bytes_total: 0,
     };
 
     g.set_tracks_info(&SRC.as_path());
+
+    g.spinner.stop();
 
     if flag("c") {
         print!(
