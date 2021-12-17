@@ -407,15 +407,15 @@ fn traverse_dir(
     }
 }
 
-fn copy_album(count: u64) {
+fn copy_album(tracks_total: u64) {
     check_dst();
 
-    if count < 1 {
+    if tracks_total < 1 {
         println!("No audio files found at \"{}\"", SRC.display());
         exit(1);
     }
 
-    let width = format!("{}", count).len();
+    let width = format!("{}", tracks_total).len();
 
     // Extracts file name from [src] and makes it pretty, if necessary.
     let decor = |ii, src: &PathBuf, step: &Vec<PathBuf>| -> PathBuf {
@@ -530,7 +530,7 @@ fn copy_album(count: u64) {
                 "{:1$}/{2} {3} {4}",
                 ii,
                 width,
-                count,
+                tracks_total,
                 COLUMN_ICON,
                 &dst.to_str().unwrap()
             );
@@ -549,7 +549,7 @@ fn copy_album(count: u64) {
     macro_rules! entry_num {
         ($i: expr) => {
             if flag("r") {
-                count - $i
+                tracks_total - $i
             } else {
                 $i + 1
             }
