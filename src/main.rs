@@ -587,7 +587,13 @@ impl GlobalState {
                         String::from(&p.file_name().unwrap().to_str().unwrap().to_string());
 
                     if is_audiofile(&p) {
-                        self.spinner.message(file_name + BDELIM_ICON);
+                        match &self.spinner {
+                            Some(spinner) => spinner.message(file_name + BDELIM_ICON),
+                            _ => panic!(
+                                "{}GlobalState::spinner is already dead.{}",
+                                BDELIM_ICON, BDELIM_ICON,
+                            ),
+                        };
                         bytes += &p.metadata().unwrap().len();
                         1
                     } else {
@@ -607,6 +613,11 @@ impl GlobalState {
         let count = self.tracks_count(dir);
         self.tracks_total = count.0;
         self.bytes_total = count.1;
+
+        if let Some(spinner) = self.spinner.take() {
+            spinner.stop();
+        }
+        println!("");
     }
 
     fn log(&mut self, entry: String) {
@@ -616,7 +627,7 @@ impl GlobalState {
 
 struct GlobalState {
     pub now: Instant,
-    pub spinner: Spinner,
+    pub spinner: Option<Spinner>,
     pub log: Vec<String>,
     pub suspicious_total: u64,
     pub tracks_total: u64,
@@ -629,16 +640,13 @@ fn main() {
     let mut g = GlobalState {
         now: Instant::now(),
         log: Vec::new(),
-        spinner: Spinner::new(&Spinners::Moon, "".into()),
+        spinner: Some(Spinner::new(&Spinners::Moon, "".into())),
         suspicious_total: 0,
         tracks_total: 0,
         bytes_total: 0,
     };
 
     g.set_tracks_info(&SRC.as_path());
-
-    g.spinner.stop();
-    println!("");
 
     if flag("c") {
         print!(
