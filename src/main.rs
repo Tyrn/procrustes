@@ -676,7 +676,7 @@ fn main() {
     }
     if g.suspicious_total > 0 {
         println!(
-            " {} Suspicious: {} file(s)",
+            " {} Suspicious, skipped: {} file(s)",
             SUSPICIOUS_ICON, g.suspicious_total
         );
     }
