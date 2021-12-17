@@ -407,161 +407,161 @@ fn traverse_dir(
     }
 }
 
-fn copy_album(count: u64) {
-    check_dst();
+impl GlobalState {
+    fn copy_album(&self) {
+        check_dst();
 
-    if count < 1 {
-        println!("No audio files found at \"{}\"", SRC.display());
-        exit(1);
-    }
+        if self.tracks_total < 1 {
+            println!("No audio files found at \"{}\"", SRC.display());
+            exit(1);
+        }
 
-    let width = format!("{}", count).len();
+        let width = format!("{}", self.tracks_total).len();
 
-    // Extracts file name from [src] and makes it pretty, if necessary.
-    let decor = |ii, src: &PathBuf, step: &Vec<PathBuf>| -> PathBuf {
-        if flag("s") && flag("t") {
-            PathBuf::from(src.file_name().unwrap())
-        } else {
-            let prefix = if flag("i") && !flag("t") {
-                if step.len() > 0 {
-                    let lines = step.iter().map(|p| p.to_str().unwrap());
-                    let chain = join(lines, "-");
-                    format!("{:01$}-[{2}]", ii, width, chain)
+        // Extracts file name from [src] and makes it pretty, if necessary.
+        let decor = |ii, src: &PathBuf, step: &Vec<PathBuf>| -> PathBuf {
+            if flag("s") && flag("t") {
+                PathBuf::from(src.file_name().unwrap())
+            } else {
+                let prefix = if flag("i") && !flag("t") {
+                    if step.len() > 0 {
+                        let lines = step.iter().map(|p| p.to_str().unwrap());
+                        let chain = join(lines, "-");
+                        format!("{:01$}-[{2}]", ii, width, chain)
+                    } else {
+                        format!("{:01$}", ii, width)
+                    }
                 } else {
                     format!("{:01$}", ii, width)
-                }
-            } else {
-                format!("{:01$}", ii, width)
-            };
+                };
 
-            if flag("u") {
-                let ext = src.extension().unwrap();
-                let name = format!(
-                    "{}-{}{}.{}",
-                    prefix,
-                    sval("u"),
-                    artist(true),
-                    ext.to_str().unwrap()
-                );
-                PathBuf::from(name)
-            } else {
-                let fnm = src.file_name().unwrap();
-                let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
-                PathBuf::from(name)
-            }
-        }
-    };
-
-    // Calculates destination for [src] file to be copied to and
-    // makes a copy.
-    let copy = |ii, src: &PathBuf, step: &Vec<PathBuf>| {
-        let file_name = decor(ii, src, step);
-        let depth: PathBuf = if flag("t") {
-            step.iter().collect()
-        } else {
-            PathBuf::new()
-        };
-        if flag("t") && !flag("y") {
-            let dst_dir = DST_DIR.join(&depth);
-            fs::create_dir_all(&dst_dir).expect(
-                format!(
-                    " {} Error while creating \"{}\" directory.",
-                    WARNING_ICON,
-                    &dst_dir.to_str().unwrap(),
-                )
-                .as_str(),
-            );
-        }
-        let dst = DST_DIR.join(&depth).join(&file_name);
-
-        // All the copying and tagging happens here.
-        if !flag("y") {
-            fs::copy(&src, &dst).expect(
-                format!(
-                    " {} Error while copying \"{}\" file.",
-                    WARNING_ICON,
-                    &dst.to_str().unwrap()
-                )
-                .as_str(),
-            );
-
-            let tag_file = taglib::File::new(&dst).expect(
-                format!(
-                    " {} Error while opening \"{}\" for tagging.",
-                    WARNING_ICON,
-                    &dst.to_str().unwrap(),
-                )
-                .as_str(),
-            );
-            let mut tag = tag_file.tag().expect("No tagging data.");
-
-            // Calculates the contents for the title tag.
-            let title = |s: &str| -> String {
-                let stem = &src.file_stem().unwrap().to_str().unwrap();
-                if flag("F") {
-                    format!("{}>{}", ii, &stem)
-                } else if flag("f") {
-                    stem.to_string()
+                if flag("u") {
+                    let ext = src.extension().unwrap();
+                    let name = format!(
+                        "{}-{}{}.{}",
+                        prefix,
+                        sval("u"),
+                        artist(true),
+                        ext.to_str().unwrap()
+                    );
+                    PathBuf::from(name)
                 } else {
-                    format!("{} {}", ii, s)
+                    let fnm = src.file_name().unwrap();
+                    let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
+                    PathBuf::from(name)
                 }
+            }
+        };
+
+        // Calculates destination for [src] file to be copied to and
+        // makes a copy.
+        let copy = |ii, src: &PathBuf, step: &Vec<PathBuf>| {
+            let file_name = decor(ii, src, step);
+            let depth: PathBuf = if flag("t") {
+                step.iter().collect()
+            } else {
+                PathBuf::new()
             };
-
-            if !flag("d") {
-                tag.set_track(ii as u32);
+            if flag("t") && !flag("y") {
+                let dst_dir = DST_DIR.join(&depth);
+                fs::create_dir_all(&dst_dir).expect(
+                    format!(
+                        " {} Error while creating \"{}\" directory.",
+                        WARNING_ICON,
+                        &dst_dir.to_str().unwrap(),
+                    )
+                        .as_str(),
+                );
             }
-            if flag("a") && is_album_tag() {
-                tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), album_tag())));
-                tag.set_artist(sval("a"));
-                tag.set_album(album_tag());
-            } else if flag("a") {
-                tag.set_title(&title(sval("a")));
-                tag.set_artist(sval("a"));
-            } else if is_album_tag() {
-                tag.set_title(&title(album_tag()));
-                tag.set_album(album_tag());
+            let dst = DST_DIR.join(&depth).join(&file_name);
+
+            // All the copying and tagging happens here.
+            if !flag("y") {
+                fs::copy(&src, &dst).expect(
+                    format!(
+                        " {} Error while copying \"{}\" file.",
+                        WARNING_ICON,
+                        &dst.to_str().unwrap()
+                    )
+                        .as_str(),
+                );
+
+                let tag_file = taglib::File::new(&dst).expect(
+                    format!(
+                        " {} Error while opening \"{}\" for tagging.",
+                        WARNING_ICON,
+                        &dst.to_str().unwrap(),
+                    )
+                        .as_str(),
+                );
+                let mut tag = tag_file.tag().expect("No tagging data.");
+
+                // Calculates the contents for the title tag.
+                let title = |s: &str| -> String {
+                    let stem = &src.file_stem().unwrap().to_str().unwrap();
+                    if flag("F") {
+                        format!("{}>{}", ii, &stem)
+                    } else if flag("f") {
+                        stem.to_string()
+                    } else {
+                        format!("{} {}", ii, s)
+                    }
+                };
+
+                if !flag("d") {
+                    tag.set_track(ii as u32);
+                }
+                if flag("a") && is_album_tag() {
+                    tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), album_tag())));
+                    tag.set_artist(sval("a"));
+                    tag.set_album(album_tag());
+                } else if flag("a") {
+                    tag.set_title(&title(sval("a")));
+                    tag.set_artist(sval("a"));
+                } else if is_album_tag() {
+                    tag.set_title(&title(album_tag()));
+                    tag.set_album(album_tag());
+                }
+
+                tag_file.save();
             }
 
-            tag_file.save();
-        }
+            if flag("v") {
+                println!(
+                    "{:1$}/{2} {3} {4}",
+                    ii,
+                    width,
+                    self.tracks_total,
+                    COLUMN_ICON,
+                    &dst.to_str().unwrap()
+                );
+            } else {
+                print!(".");
+                io::stdout().flush().unwrap();
+            }
+        };
 
-        if flag("v") {
-            println!(
-                "{:1$}/{2} {3} {4}",
-                ii,
-                width,
-                count,
-                COLUMN_ICON,
-                &dst.to_str().unwrap()
-            );
-        } else {
-            print!(".");
+        if !flag("v") {
+            print!("Starting ");
             io::stdout().flush().unwrap();
         }
-    };
 
-    if !flag("v") {
-        print!("Starting ");
-        io::stdout().flush().unwrap();
-    }
-
-    // Calculates file number.
-    macro_rules! entry_num {
+        // Calculates file number.
+        macro_rules! entry_num {
         ($i: expr) => {
             if flag("r") {
-                count - $i
+                self.tracks_total - $i
             } else {
                 $i + 1
             }
         };
     }
 
-    for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-        copy(entry_num!(i as u64), &src, &step);
+        for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
+            copy(entry_num!(i as u64), &src, &step);
+        }
     }
-}
 
-impl GlobalState {
     fn tracks_count(&mut self, dir: &Path) -> (u64, u64) {
         if dir.is_file() {
             if is_audiofile(dir) {
@@ -592,8 +592,8 @@ impl GlobalState {
                         1
                     } else {
                         if is_audiofile_ext(&p) {
+                            self.log(format!(" {} {}", SUSPICIOUS_ICON, file_name));
                             self.suspicious_total += 1;
-                            self.log(format!(" {} {}", SUSPICIOUS_ICON, file_name))
                         }
                         0
                     }
@@ -603,6 +603,7 @@ impl GlobalState {
 
         (tracks, bytes)
     }
+
     fn set_tracks_info(&mut self, dir: &Path) {
         let count = self.tracks_count(dir);
         self.tracks_total = count.0;
@@ -626,7 +627,7 @@ struct GlobalState {
 fn main() {
     check_src();
 
-    let mut g = GlobalState {
+    let g = GlobalState {
         now: Instant::now(),
         log: Vec::new(),
         spinner: Spinner::new(&Spinners::Moon, "".into()),
@@ -656,7 +657,7 @@ fn main() {
         }
         println!("; Time: {:.1}s", g.now.elapsed().as_secs_f64())
     } else {
-        copy_album(g.tracks_total);
+        g.copy_album();
 
         println!(
             " {} Done ({}, {}; {:.1}s).",
