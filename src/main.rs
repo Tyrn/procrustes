@@ -41,6 +41,7 @@ const BDELIM_ICON: &str = "\u{01f539}";
 const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
 const COLUMN_ICON: &str = "\u{002714}";
+const LINK_ICON: &str = "\u{01f9f7}";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = retrieve_args();
@@ -589,7 +590,9 @@ impl GlobalState {
 
                     if is_audiofile(&p) {
                         match &self.spinner {
-                            Some(spinner) => spinner.message(file_name + BDELIM_ICON),
+                            Some(spinner) => {
+                                spinner.message(truncate_str(&(file_name + BDELIM_ICON), 100))
+                            }
                             _ => panic!(
                                 "{}GlobalState::spinner is already dead.{}",
                                 BDELIM_ICON, BDELIM_ICON,
@@ -716,6 +719,17 @@ fn human_fine(bytes: u64) -> String {
         return "1".to_string();
     }
     panic!("Fatal error: human_fine({}).", bytes)
+}
+
+fn truncate_str(s: &str, limit: usize) -> String {
+    let overhead: usize = if s.len() > limit { s.len() - limit } else { 0 };
+    if overhead > 0 {
+        let (head, tail) = s.split_at(s.len() / 2);
+        let (hh, _) = head.split_at(overhead / 2 - 2);
+        let (_, tt) = tail.split_at(overhead / 2 + 2);
+        return format!("{} {} {}", hh.trim(), LINK_ICON, tt.trim());
+    }
+    return s.to_string();
 }
 
 fn is_pattern_ok(path: &Path) -> bool {

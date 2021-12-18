@@ -22,6 +22,14 @@ fn test_std_path() {
 }
 
 #[test]
+fn test_truncate_str() {
+    let s1 = "The quick brown fox jumps over the lazy dog!";
+
+    assert_eq!(truncate_str(s1, 120), s1);
+    assert_eq!(truncate_str(s1, 20), "The quick 🧷 azy dog!");
+}
+
+#[test]
 fn test_is_audiofile_ext() {
     assert!(is_audiofile_ext(Path::new("charlie.ogg")));
     assert!(is_audiofile_ext(Path::new("charlie.MP3")));
