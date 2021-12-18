@@ -739,11 +739,11 @@ fn human_fine(bytes: u64) -> String {
 }
 
 fn truncate_str(s: &str, limit: usize) -> String {
-    let overhead: usize = if s.len() > limit { s.len() - limit } else { 0 };
-    if overhead > 0 {
+    let limit = cmp::max(10, limit);
+    if s.len() > limit {
         let (head, tail) = s.split_at(s.len() / 2);
-        let (hh, _) = head.split_at(overhead / 2 - 2);
-        let (_, tt) = tail.split_at(overhead / 2 + 2);
+        let (hh, _) = head.split_at(limit / 2);
+        let (_, tt) = tail.split_at(tail.len() - limit / 2);
         return format!("{} {} {}", hh.trim(), LINK_ICON, tt.trim());
     }
     return s.to_string();
