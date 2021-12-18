@@ -232,7 +232,7 @@ fn retrieve_args() -> ArgMatches<'static> {
                 .short("e")
                 .long("file-type")
                 .value_name("EXT")
-                .help("Accept only audio files of the specified type (e.g. -e '*kb.mp3')")
+                .help("Accept only audio files of the specified type (e.g. -e ogg, or even -e '*kb.mp3')")
                 .takes_value(true),
         )
         .arg(
@@ -734,9 +734,14 @@ fn truncate_str(s: &str, limit: usize) -> String {
 
 fn is_pattern_ok(path: &Path) -> bool {
     if flag("e") {
-        let pattern = glob::Pattern::new(sval("e")).unwrap();
-        if !pattern.matches(path.file_name().unwrap().to_str().unwrap()) {
-            return false;
+        let e = sval("e");
+        if e.contains("*") || e.contains("[") || e.contains("?") {
+            let pattern = glob::Pattern::new(e).unwrap();
+            if !pattern.matches(path.file_name().unwrap().to_str().unwrap()) {
+                return false;
+            }
+        } else {
+            return has_ext_of(path.to_str().unwrap(), e);
         }
     };
     true
