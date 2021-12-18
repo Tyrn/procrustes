@@ -282,61 +282,6 @@ fn retrieve_args() -> ArgMatches<'static> {
         .get_matches()
 }
 
-fn check_src() {
-    let src = pval("src");
-
-    if !src.exists() {
-        println!(
-            " {} Source directory \"{}\" is not there.",
-            WARNING_ICON,
-            src.display()
-        );
-        exit(1);
-    }
-}
-
-fn check_dst() {
-    let dst = pval("dst-dir");
-
-    if !dst.exists() {
-        println!(
-            " {} Destination path \"{}\" is not there.",
-            WARNING_ICON,
-            dst.display()
-        );
-        exit(1);
-    }
-    if !flag("p") && !flag("y") {
-        if DST_DIR.exists() {
-            if flag("w") {
-                fs::remove_dir_all(&DST_DIR.as_path()).expect(
-                    format!(
-                        " {} Failed to remove destination directory \"{}\".",
-                        WARNING_ICON,
-                        DST_DIR.display()
-                    )
-                    .as_str(),
-                );
-            } else {
-                println!(
-                    " {} Destination directory \"{}\" already exists.",
-                    WARNING_ICON,
-                    DST_DIR.display()
-                );
-                exit(1);
-            }
-        }
-        fs::create_dir(&DST_DIR.as_path()).expect(
-            format!(
-                " {} Destination directory \"{}\" already exists!",
-                WARNING_ICON,
-                DST_DIR.display()
-            )
-            .as_str(),
-        );
-    }
-}
-
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
         .into_iter()
@@ -410,8 +355,81 @@ fn traverse_dir(
 }
 
 impl GlobalState {
+    fn check_src(&mut self) {
+        let src = pval("src");
+
+        if !src.exists() {
+            println!(
+                " {} Source directory \"{}\" is not there.",
+                WARNING_ICON,
+                src.display()
+            );
+            exit(1);
+        }
+        if !flag("c") && SRC.is_dir() && DST_DIR.starts_with(&*SRC) {
+            let dst_msg = format!(
+                " {} Target directory \"{}\"",
+                WARNING_ICON,
+                DST_DIR.display()
+            );
+            let src_msg = format!(" {} is inside source \"{}\"", WARNING_ICON, SRC.display());
+            if flag("y") {
+                self.log(dst_msg);
+                self.log(src_msg);
+                self.log(format!(" {} It won't run.", WARNING_ICON));
+            } else {
+                println!("{}", dst_msg);
+                println!("{}", src_msg);
+                println!(" {} No go.", WARNING_ICON);
+                exit(1);
+            }
+        }
+    }
+
+    fn check_dst(&self) {
+        let dst = pval("dst-dir");
+
+        if !dst.exists() {
+            println!(
+                " {} Destination path \"{}\" is not there.",
+                WARNING_ICON,
+                dst.display()
+            );
+            exit(1);
+        }
+        if !flag("p") && !flag("y") {
+            if DST_DIR.exists() {
+                if flag("w") {
+                    fs::remove_dir_all(&DST_DIR.as_path()).expect(
+                        format!(
+                            " {} Failed to remove destination directory \"{}\".",
+                            WARNING_ICON,
+                            DST_DIR.display()
+                        )
+                        .as_str(),
+                    );
+                } else {
+                    println!(
+                        " {} Destination directory \"{}\" already exists.",
+                        WARNING_ICON,
+                        DST_DIR.display()
+                    );
+                    exit(1);
+                }
+            }
+            fs::create_dir(&DST_DIR.as_path()).expect(
+                format!(
+                    " {} Destination directory \"{}\" already exists!",
+                    WARNING_ICON,
+                    DST_DIR.display()
+                )
+                .as_str(),
+            );
+        }
+    }
+
     fn copy_album(&self) {
-        check_dst();
+        self.check_dst();
 
         if self.tracks_total < 1 {
             println!("No audio files found at \"{}\"", SRC.display());
@@ -562,6 +580,13 @@ impl GlobalState {
         for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
             copy(entry_num!(i as u64), &src, &step);
         }
+        println!(
+            " {} Done ({}, {}; {:.1}s).",
+            DONE_ICON,
+            self.tracks_total,
+            human_fine(self.bytes_total),
+            self.now.elapsed().as_secs_f64()
+        );
     }
 
     fn tracks_count(&mut self, dir: &Path) -> (u64, u64) {
@@ -640,8 +665,6 @@ struct GlobalState {
 }
 
 fn main() {
-    check_src();
-
     let mut g = GlobalState {
         now: Instant::now(),
         log: Vec::new(),
@@ -650,6 +673,8 @@ fn main() {
         tracks_total: 0,
         bytes_total: 0,
     };
+
+    g.check_src();
 
     g.set_tracks_info(&SRC.as_path());
 
@@ -670,14 +695,6 @@ fn main() {
         println!("; Time: {:.1}s", g.now.elapsed().as_secs_f64())
     } else {
         g.copy_album();
-
-        println!(
-            " {} Done ({}, {}; {:.1}s).",
-            DONE_ICON,
-            g.tracks_total,
-            human_fine(g.bytes_total),
-            g.now.elapsed().as_secs_f64()
-        );
     }
     if g.suspicious_total > 0 {
         println!(
