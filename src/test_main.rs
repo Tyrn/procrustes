@@ -23,8 +23,10 @@ fn test_std_path() {
 
 #[test]
 fn test_truncate_str() {
+    let s21_12_19 = "28-28. Ch. 14 - Abu Ghraib's Abuses and Tortures - Understanding and Personalizing Its Horrors.mp3";
     let s1 = "The quick brown fox jumps over the lazy dog!";
 
+    assert_eq!(truncate_str(s21_12_19, 100), s1);
     assert_eq!(truncate_str(s1, 120), s1);
     assert_eq!(truncate_str(s1, 20), "The quick 👓 azy dog!");
 }
