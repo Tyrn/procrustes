@@ -41,7 +41,7 @@ const BDELIM_ICON: &str = "\u{01f539}";
 const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
 const COLUMN_ICON: &str = "\u{002714}";
-const LINK_ICON: &str = "\u{01f9f7}";
+const LINK_ICON: &str = "\u{01f453}";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = retrieve_args();

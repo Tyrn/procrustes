@@ -26,7 +26,7 @@ fn test_truncate_str() {
     let s1 = "The quick brown fox jumps over the lazy dog!";
 
     assert_eq!(truncate_str(s1, 120), s1);
-    assert_eq!(truncate_str(s1, 20), "The quick 🧷 azy dog!");
+    assert_eq!(truncate_str(s1, 20), "The quick 👓 azy dog!");
 }
 
 #[test]
