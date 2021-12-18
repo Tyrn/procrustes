@@ -732,19 +732,22 @@ fn truncate_str(s: &str, limit: usize) -> String {
     return s.to_string();
 }
 
+/// Returns true, if [path] satisfies file-type (-e) CLI suggestion,
+/// otherwise false.
+/// If the file type is not supplied, returns true.
+///
 fn is_pattern_ok(path: &Path) -> bool {
     if flag("e") {
         let e = sval("e");
         if e.contains("*") || e.contains("[") || e.contains("?") {
             let pattern = glob::Pattern::new(e).unwrap();
-            if !pattern.matches(path.file_name().unwrap().to_str().unwrap()) {
-                return false;
-            }
+            pattern.matches(path.file_name().unwrap().to_str().unwrap())
         } else {
-            return has_ext_of(path.to_str().unwrap(), e);
+            has_ext_of(path.to_str().unwrap(), e)
         }
-    };
-    true
+    } else {
+        true
+    }
 }
 
 /// Returns true, if [path] has an audio file extension, otherwise false.
