@@ -761,15 +761,16 @@ fn is_audiofile_ext(path: &Path) -> bool {
 /// Returns true, if [path] is a valid audio file, otherwise false.
 ///
 fn is_audiofile(path: &Path) -> bool {
-    if !is_pattern_ok(path) {
-        return false;
-    }
-    match taglib::File::new(path) {
-        Err(_) => false,
-        Ok(v) => match v.tag() {
+    if is_pattern_ok(path) {
+        match taglib::File::new(path) {
             Err(_) => false,
-            Ok(_) => true,
-        },
+            Ok(v) => match v.tag() {
+                Err(_) => false,
+                Ok(_) => true,
+            },
+        }
+    } else {
+        false
     }
 }
 
