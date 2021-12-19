@@ -576,7 +576,7 @@ impl GlobalState {
         macro_rules! entry_num {
             ($i: expr) => {
                 if flag("r") {
-                    self.tracks_total - $i
+                    self.tracks_total as usize - $i
                 } else {
                     $i + 1
                 }
@@ -584,7 +584,7 @@ impl GlobalState {
         }
 
         for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-            self.copy(entry_num!(i as u64) as usize, &src, &step);
+            self.copy(entry_num!(i), &src, &step);
         }
         println!(
             " {} Done ({}, {}; {:.1}s).",
