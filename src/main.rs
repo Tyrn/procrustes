@@ -616,7 +616,7 @@ impl GlobalState {
                     if is_audiofile(&p) {
                         match &self.spinner {
                             Some(spinner) => {
-                                spinner.message(truncate_str(&(file_name + BDELIM_ICON), 100))
+                                spinner.message(truncate_str(&(file_name + BDELIM_ICON), 72))
                             }
                             _ => panic!(
                                 "{}GlobalState::spinner is already dead.{}",
