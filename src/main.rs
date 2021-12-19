@@ -465,7 +465,7 @@ impl GlobalState {
 
     // Calculates destination for [src] file to be copied to and
     // makes a copy.
-    fn copy(&self, ii: usize, width: usize, src: &PathBuf, step: &Vec<PathBuf>) {
+    fn copy(&mut self, ii: usize, width: usize, src: &PathBuf, step: &Vec<PathBuf>) {
         let file_name = self.decor(ii, width, src, step);
         let depth: PathBuf = if flag("t") {
             step.iter().collect()
@@ -488,12 +488,13 @@ impl GlobalState {
         // All the copying and tagging happens here.
         if !flag("y") {
             if dst.is_file() {
-                let msg = format!(
-                    " {} File \"{}\" already copied. Review your options.",
-                    WARNING_ICON,
-                    &dst.file_name().unwrap().to_str().unwrap()
+                self.log(
+                    format!(
+                        " {} File \"{}\" already copied. Review your options.",
+                        WARNING_ICON,
+                        &dst.file_name().unwrap().to_str().unwrap()
+                    )
                 );
-                println!("{}", msg);
             } else {
                 fs::copy(&src, &dst).expect(
                     format!(
@@ -560,7 +561,7 @@ impl GlobalState {
         }
     }
 
-    fn copy_album(&self) {
+    fn copy_album(&mut self) {
         self.check_dst();
 
         if self.tracks_total < 1 {
