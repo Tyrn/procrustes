@@ -429,7 +429,7 @@ impl GlobalState {
     }
 
     // Extracts file name from [src] and makes it pretty, if necessary.
-    fn decor(&self, ii: usize, width: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
+    fn decor(&self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
         if flag("s") && flag("t") {
             PathBuf::from(src.file_name().unwrap())
         } else {
@@ -437,12 +437,12 @@ impl GlobalState {
                 if step.len() > 0 {
                     let lines = step.iter().map(|p| p.to_str().unwrap());
                     let chain = join(lines, "-");
-                    format!("{:01$}-[{2}]", ii, width, chain)
+                    format!("{:01$}-[{2}]", ii, self.width, chain)
                 } else {
-                    format!("{:01$}", ii, width)
+                    format!("{:01$}", ii, self.width)
                 }
             } else {
-                format!("{:01$}", ii, width)
+                format!("{:01$}", ii, self.width)
             };
 
             if flag("u") {
@@ -465,8 +465,8 @@ impl GlobalState {
 
     // Calculates destination for [src] file to be copied to and
     // makes a copy.
-    fn copy(&mut self, ii: usize, width: usize, src: &PathBuf, step: &Vec<PathBuf>) {
-        let file_name = self.decor(ii, width, src, step);
+    fn copy(&mut self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) {
+        let file_name = self.decor(ii, src, step);
         let depth: PathBuf = if flag("t") {
             step.iter().collect()
         } else {
@@ -548,7 +548,7 @@ impl GlobalState {
             println!(
                 "{:1$}/{2} {3} {4}",
                 ii,
-                width,
+                self.width,
                 self.tracks_total,
                 COLUMN_ICON,
                 &dst.to_str().unwrap()
@@ -567,8 +567,6 @@ impl GlobalState {
             exit(1);
         }
 
-        let width = format!("{}", self.tracks_total).len();
-
         if !flag("v") {
             print!("Starting ");
             io::stdout().flush().unwrap();
@@ -586,7 +584,7 @@ impl GlobalState {
         }
 
         for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-            self.copy(entry_num!(i as u64) as usize, width, &src, &step);
+            self.copy(entry_num!(i as u64) as usize, &src, &step);
         }
         println!(
             " {} Done ({}, {}; {:.1}s).",
@@ -651,6 +649,7 @@ impl GlobalState {
         let count = self.tracks_count(dir);
         self.tracks_total = count.0;
         self.bytes_total = count.1;
+        self.width = format!("{}", self.tracks_total).len();
 
         if let Some(spinner) = self.spinner.take() {
             spinner.stop();
@@ -669,9 +668,10 @@ impl GlobalState {
 }
 
 struct GlobalState {
-    pub now: Instant,
     pub spinner: Option<Spinner>,
+    pub now: Instant,
     pub log: Vec<String>,
+    pub width: usize, // Digits in tracks_total, e.g. 3 if tracks_total is 739.
     pub suspicious_total: u64,
     pub tracks_total: u64,
     pub bytes_total: u64,
@@ -679,9 +679,10 @@ struct GlobalState {
 
 fn main() {
     let mut g = GlobalState {
+        spinner: Some(Spinner::new(&Spinners::Moon, "".into())),
         now: Instant::now(),
         log: Vec::new(),
-        spinner: Some(Spinner::new(&Spinners::Moon, "".into())),
+        width: 2,
         suspicious_total: 0,
         tracks_total: 0,
         bytes_total: 0,
@@ -690,6 +691,8 @@ fn main() {
     g.check_src();
 
     g.set_tracks_info(&SRC.as_path());
+
+    // GlobalState ready.
 
     if flag("c") {
         print!(
