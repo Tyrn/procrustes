@@ -22,28 +22,41 @@ fn test_std_path() {
 }
 
 #[test]
-fn test_truncate_str() {
-    let en1 = "The Good Soldier SvejkThe Good Soldier Svejk";
-    let sv1 = "Osudy dobrého vojáka Švejka za světové války";
-    let svu1 = sv1.chars().collect::<Vec<char>>();
+fn test_string() {
+    let simp = "The Good Soldier SvejkThe Good Soldier Svejk";
+    let diac = "Osudy dobrého vojáka Švejka za světové války";
 
-    assert_eq!(en1.len(), 44);
-    assert_eq!(sv1.len(), 50);
+    assert_eq!(simp.len(), 44);
+    assert_eq!(diac.len(), 50);
 
-    let (head, _) = sv1.split_at(10);
+    let (head, _) = diac.split_at(10);
     assert_eq!(head, "Osudy dobr");
-    // let (head, _) = sv1.split_at(11);
+
+    // let (head, _) = diac.split_at(11);
     // assert_eq!(head, "Osudy dobre");
-    let (head, _) = sv1.as_bytes().split_at(11);
+
+    let (head, _) = diac.as_bytes().split_at(11);
     assert_eq!(String::from_utf8_lossy(head), "Osudy dobr�");
-    let (head, _) = sv1.split_at(12);
+
+    let (head, _) = diac.split_at(12);
     assert_eq!(head, "Osudy dobré");
 
-    let (head, _) = svu1.split_at(10);
-    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobr");
-    let (head, _) = svu1.split_at(11);
-    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobré");
+    // Magnificent and irresistible!
+    assert_eq!(diac.get(..12).unwrap(), "Osudy dobré");
+    assert_eq!(diac.get(33..).unwrap(), " světové války");
 
+    // Now on Vec<char>.
+    let vecd = diac.chars().collect::<Vec<char>>();
+
+    let (head, _) = vecd.split_at(10);
+    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobr");
+
+    let (head, _) = vecd.split_at(11);
+    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobré");
+}
+
+#[test]
+fn test_truncate_str() {
     let lat1 = "The quick brown fox jumps over the lazy dog!";
     let cyr1 = "Однажды играли в карты у конногвардейца На..";
 

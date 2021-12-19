@@ -829,7 +829,7 @@ fn make_initials(authors: &str) -> String {
     }
 
     fn gv(s: &str) -> Vec<&str> {
-        UnicodeSegmentation::graphemes(s, true).collect::<Vec<&str>>()
+        UnicodeSegmentation::graphemes(s, true).collect()
     }
 
     fn form_initial(name: &str) -> String {
