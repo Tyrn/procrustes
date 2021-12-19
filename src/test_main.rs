@@ -23,11 +23,31 @@ fn test_std_path() {
 
 #[test]
 fn test_truncate_str() {
+    let en1 = "The Good Soldier SvejkThe Good Soldier Svejk";
+    let sv1 = "Osudy dobrého vojáka Švejka za světové války";
+    let svu1 = sv1.chars().collect::<Vec<char>>();
+
+    assert_eq!(en1.len(), 44);
+    assert_eq!(sv1.len(), 50);
+
+    let (head, _) = sv1.split_at(10);
+    assert_eq!(head, "Osudy dobr");
+    // let (head, _) = sv1.split_at(11);
+    // assert_eq!(head, "Osudy dobre");
+    let (head, _) = sv1.split_at(12);
+    assert_eq!(head, "Osudy dobré");
+
+    let (head, _) = svu1.split_at(10);
+    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobr");
+    let (head, _) = svu1.split_at(11);
+    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobré");
+
     let lat1 = "The quick brown fox jumps over the lazy dog!";
     let cyr1 = "Однажды играли в карты у конногвардейца На..";
 
     assert_eq!(lat1.len(), 44);
     assert_eq!(cyr1.len(), 80);
+
     assert_eq!(cyr1.chars().collect::<Vec<char>>().len(), 44);
 
     assert_eq!(truncate_str(cyr1, 10), "Однаж ⚡ На..");
