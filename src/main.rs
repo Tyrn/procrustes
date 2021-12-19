@@ -497,14 +497,23 @@ impl GlobalState {
 
             // All the copying and tagging happens here.
             if !flag("y") {
-                fs::copy(&src, &dst).expect(
-                    format!(
-                        " {} Error while copying \"{}\" file.",
+                if dst.is_file() {
+                    let msg = format!(
+                        " {} File \"{}\" already copied. Review your options.",
                         WARNING_ICON,
-                        &dst.to_str().unwrap()
-                    )
-                    .as_str(),
-                );
+                        &dst.file_name().unwrap().to_str().unwrap()
+                    );
+                    println!("{}", msg);
+                } else {
+                    fs::copy(&src, &dst).expect(
+                        format!(
+                            " {} Error while copying \"{}\" file.",
+                            WARNING_ICON,
+                            &dst.to_str().unwrap()
+                        )
+                        .as_str(),
+                    );
+                }
 
                 let tag_file = taglib::File::new(&dst).expect(
                     format!(

@@ -28,13 +28,18 @@ fn test_string() {
 
     assert_eq!(simp.len(), 44);
     assert_eq!(diac.len(), 50);
+    assert_eq!(diac.chars().count(), 44);
+    assert_eq!(diac.graphemes(true).count(), 44);
 
     let (head, _) = diac.split_at(10);
     assert_eq!(head, "Osudy dobr");
 
+    assert_eq!(diac.is_char_boundary(11), false);
+
     // let (head, _) = diac.split_at(11);
     // assert_eq!(head, "Osudy dobre");
 
+    // There is a way to violate a string:
     let (head, _) = diac.as_bytes().split_at(11);
     assert_eq!(String::from_utf8_lossy(head), "Osudy dobr�");
 
@@ -45,7 +50,7 @@ fn test_string() {
     assert_eq!(diac.get(..12).unwrap(), "Osudy dobré");
     assert_eq!(diac.get(33..).unwrap(), " světové války");
 
-    // Now on Vec<char>.
+    // Now on Vec<char>:
     let vecd = diac.chars().collect::<Vec<char>>();
 
     let (head, _) = vecd.split_at(10);
