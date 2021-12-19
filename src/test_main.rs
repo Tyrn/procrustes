@@ -34,6 +34,8 @@ fn test_truncate_str() {
     assert_eq!(head, "Osudy dobr");
     // let (head, _) = sv1.split_at(11);
     // assert_eq!(head, "Osudy dobre");
+    let (head, _) = sv1.as_bytes().split_at(11);
+    assert_eq!(String::from_utf8_lossy(head), "Osudy dobr�");
     let (head, _) = sv1.split_at(12);
     assert_eq!(head, "Osudy dobré");
 
