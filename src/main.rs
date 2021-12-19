@@ -480,7 +480,7 @@ impl GlobalState {
                     WARNING_ICON,
                     &dst_dir.to_str().unwrap(),
                 )
-                    .as_str(),
+                .as_str(),
             );
         }
         let dst = DST_DIR.join(&depth).join(&file_name);
@@ -488,13 +488,11 @@ impl GlobalState {
         // All the copying and tagging happens here.
         if !flag("y") {
             if dst.is_file() {
-                self.log(
-                    format!(
-                        " {} File \"{}\" already copied. Review your options.",
-                        WARNING_ICON,
-                        &dst.file_name().unwrap().to_str().unwrap()
-                    )
-                );
+                self.log(format!(
+                    " {} File \"{}\" already copied. Review your options.",
+                    WARNING_ICON,
+                    &dst.file_name().unwrap().to_str().unwrap()
+                ));
             } else {
                 fs::copy(&src, &dst).expect(
                     format!(
@@ -502,7 +500,7 @@ impl GlobalState {
                         WARNING_ICON,
                         &dst.to_str().unwrap()
                     )
-                        .as_str(),
+                    .as_str(),
                 );
             }
 
@@ -512,7 +510,7 @@ impl GlobalState {
                     WARNING_ICON,
                     &dst.to_str().unwrap(),
                 )
-                    .as_str(),
+                .as_str(),
             );
             let mut tag = tag_file.tag().expect("No tagging data.");
 
@@ -658,6 +656,11 @@ impl GlobalState {
             spinner.stop();
         }
         println!("");
+    }
+
+    #[allow(dead_code)]
+    fn logr(&mut self, entry: &str) {
+        self.log.push(entry.to_string());
     }
 
     fn log(&mut self, entry: String) {
