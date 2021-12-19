@@ -23,39 +23,28 @@ fn test_std_path() {
 
 #[test]
 fn test_truncate_str() {
-    let s21_12_19 = "28-28. Ch. 14 - Abu Ghraib's Abuses and Tortures - Understanding and Personalizing Its Horrors.mp3";
-    let s98 = "Romero.. The quick brown fox jumps over the lazy dog! The quick brown fox jumps over the lazy dog!";
-    let s1 = "The quick brown fox jumps over the lazy dog!";
+    let lat1 = "The quick brown fox jumps over the lazy dog!";
+    let cyr1 = "Однажды играли в карты у конногвардейца На..";
 
-    assert_eq!(s21_12_19.len(), 98);
-    assert_eq!(s98.len(), 98);
+    assert_eq!(lat1.len(), 44);
+    assert_eq!(cyr1.len(), 80);
+    assert_eq!(cyr1.chars().collect::<Vec<char>>().len(), 44);
+
+    assert_eq!(truncate_str(cyr1, 10), "Однаж ⚡ На..");
+    assert_eq!(truncate_str(lat1, 20), "The quick ⚡ lazy dog!");
+    assert_eq!(truncate_str(cyr1, 20), "Однажды иг ⚡ дейца На..");
+    assert_eq!(truncate_str(lat1, 30), "The quick brown ⚡ r the lazy dog!");
+    assert_eq!(truncate_str(cyr1, 30), "Однажды играли ⚡ огвардейца На..");
     assert_eq!(
-        truncate_str(s98, 80),
-        "Romero.. The quick brown fox jumps over 👓 quick brown fox jumps over the lazy dog!"
+        truncate_str(lat1, 43),
+        "The quick brown fox j ⚡ ps over the lazy dog!"
     );
     assert_eq!(
-        truncate_str(s21_12_19, 82),
-        "28-28. Ch. 14 - Abu Ghraib's Abuses and T 👓 tanding and Personalizing Its Horrors.mp3"
+        truncate_str(cyr1, 43),
+        "Однажды играли в карт ⚡ у конногвардейца На.."
     );
-    assert_eq!(truncate_str(s98, 10), "Romer 👓 dog!");
-    assert_eq!(truncate_str(s1, 120), s1);
-    assert_eq!(truncate_str(s1, 20), "The quick 👓 lazy dog!");
-    assert_eq!(truncate_str(s1, 30), "The quick brown 👓 r the lazy dog!");
-    assert_eq!(truncate_str(s1, 31), "The quick brown 👓 r the lazy dog!");
-    assert_eq!(truncate_str(s1, 32), "The quick brown 👓 er the lazy dog!");
-    assert_eq!(
-        truncate_str(s1, 35),
-        "The quick brown f 👓 ver the lazy dog!"
-    );
-    assert_eq!(
-        truncate_str(s1, 41),
-        "The quick brown fox 👓 s over the lazy dog!"
-    );
-    assert_eq!(
-        truncate_str(s1, 43),
-        "The quick brown fox j 👓 ps over the lazy dog!"
-    );
-    assert_eq!(truncate_str(s1, 44), s1);
+    assert_eq!(truncate_str(lat1, 44), lat1);
+    assert_eq!(truncate_str(cyr1, 44), cyr1);
 }
 
 #[test]
