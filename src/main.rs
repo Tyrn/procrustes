@@ -355,6 +355,8 @@ fn dir_walk(
 }
 
 impl GlobalState {
+    /// Checks the source validity, and its compatibility with the destination.
+    ///
     fn src_check(&mut self) {
         let src = pval("src");
 
@@ -386,6 +388,8 @@ impl GlobalState {
         }
     }
 
+    /// Creates destination boiderplate according to options, if possible.
+    ///
     fn dst_check(&self) {
         let dst = pval("dst-dir");
 
@@ -428,7 +432,8 @@ impl GlobalState {
         }
     }
 
-    // Extracts file name from [src] and makes it pretty, if necessary.
+    /// Extracts file name from the [src] track number [ii]
+    /// and makes it pretty, if necessary.
     fn track_decorate(&self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
         if flag("s") && flag("t") {
             PathBuf::from(src.file_name().unwrap())
@@ -463,8 +468,9 @@ impl GlobalState {
         }
     }
 
-    // Calculates destination for [src] file to be copied to and
-    // makes a copy.
+    /// Calculates destination for the [src] track to be copied to and
+    /// makes the copy of the valid track number [ii].
+    ///
     fn track_copy(&mut self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) {
         let file_name = self.track_decorate(ii, src, step);
         let depth: PathBuf = if flag("t") {
@@ -559,6 +565,9 @@ impl GlobalState {
         }
     }
 
+    /// Copies all the valid tracks to their destination, according to
+    /// the options and GlobalState.
+    ///
     fn album_copy(&mut self) {
         self.dst_check();
 
@@ -583,9 +592,20 @@ impl GlobalState {
             };
         }
 
+        let mut tracks_total: u64 = 0;
+
         for (i, (src, step)) in dir_walk(&SRC, [].to_vec()).enumerate() {
             self.track_copy(entry_num!(i), &src, &step);
+            tracks_total += 1;
         }
+
+        if tracks_total != self.tracks_total {
+            panic!(
+                "{}Fatal error: tracks discovered on first pass: {}; on secons pass: {}.{}",
+                BDELIM_ICON, self.tracks_total, tracks_total, BDELIM_ICON,
+            );
+        }
+
         println!(
             " {} Done ({}, {}; {:.1}s).",
             DONE_ICON,
@@ -595,6 +615,11 @@ impl GlobalState {
         );
     }
 
+    /// Returns full recursive count of audiofiles in [dir],
+    /// and the sum of their sizes.
+    ///
+    /// Sets self.suspicious_total.
+    ///
     fn tracks_count(&mut self, dir: &Path) -> (u64, u64) {
         if dir.is_file() {
             if is_audiofile(dir) {
@@ -645,8 +670,13 @@ impl GlobalState {
         (tracks, bytes)
     }
 
+    /// Initializes the GlobalState.
+    ///
     fn tracks_state_init(&mut self, dir: &Path) {
+        self.src_check();
+
         let count = self.tracks_count(dir);
+
         self.tracks_total = count.0;
         self.bytes_total = count.1;
         self.width = format!("{}", self.tracks_total).len();
@@ -672,9 +702,9 @@ struct GlobalState {
     pub now: Instant,
     pub log: Vec<String>,
     pub width: usize, // Digits in tracks_total, e.g. 3 if tracks_total is 739.
-    pub suspicious_total: u64,
-    pub tracks_total: u64,
-    pub bytes_total: u64,
+    pub suspicious_total: u64, // The count of files with common extensions, which failed to open.
+    pub tracks_total: u64, // The count of valid tracks.
+    pub bytes_total: u64, // The sum of the sizes of the valid tracks.
 }
 
 fn main() {
@@ -688,11 +718,9 @@ fn main() {
         bytes_total: 0,
     };
 
-    g.src_check();
-
     g.tracks_state_init(&SRC.as_path());
 
-    // GlobalState ready.
+    // First pass through the source done, GlobalState ready.
 
     if flag("c") {
         print!(
@@ -709,8 +737,12 @@ fn main() {
             print!("; Average: {}", human_fine(g.bytes_total / g.tracks_total));
         }
         println!("; Time: {:.1}s", g.now.elapsed().as_secs_f64())
+
+        // GlobalState statistics reported, nothing else to be done.
     } else {
         g.album_copy();
+
+        // Second pass through the source done, all the tracks, if any, copied to destination.
     }
     if g.suspicious_total > 0 {
         println!(
@@ -721,8 +753,12 @@ fn main() {
     for s in g.log {
         println!("{}", s);
     }
+
+    // Final report done.
 }
 
+/// Returns a human readable string representation of [bytes], nicely rounded.
+///
 fn human_fine(bytes: u64) -> String {
     lazy_static! {
         static ref UNIT_LIST: [(&'static str, i32); 6] = [
@@ -823,6 +859,8 @@ fn has_ext_of(path: &str, ext: &str) -> bool {
 }
 
 #[allow(dead_code)]
+/// Returns a vector of integer numbers, embedded in [s].
+///
 fn str_strip_numbers(s: &str) -> Vec<i64> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"\d+").unwrap();
@@ -851,6 +889,9 @@ fn initials(authors: &str) -> String {
         UnicodeSegmentation::graphemes(s, true).collect()
     }
 
+    /// Converts [name] to its initial. Mostly by keeping the first character
+    /// and dropping the rest; deals with special cases, too. See the unit test.
+    ///
     fn initial(name: &str) -> String {
         let cut: Vec<&str> = name.split("'").collect();
 

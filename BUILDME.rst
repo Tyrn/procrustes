@@ -1,5 +1,5 @@
-Procrustes SmArT
-****************
+Procrustes a.k.a. Damastes
+**************************
 
 Audio album builder; copy and edit on the fly.
 
