@@ -59,7 +59,8 @@ lazy_static! {
     };
 }
 
-// Calculates the destination directory according to options.
+/// Returns the destination directory, calculated according to options.
+///
 fn dst_executive() -> PathBuf {
     let prefix = if flag("b") {
         format!("{:02}-", ival("b"))
@@ -91,7 +92,8 @@ fn dst_executive() -> PathBuf {
     }
 }
 
-// Cuts the artist snippet to build a directory or file name.
+/// Returns Artist, nicely shaped to be a part of a directory/file name.
+///
 fn artist(forw_dash: bool) -> String {
     if flag("a") {
         if forw_dash {
@@ -104,6 +106,9 @@ fn artist(forw_dash: bool) -> String {
     }
 }
 
+/// Returns true, if the [name] option is present
+/// on the command line.
+///
 fn flag(name: &str) -> bool {
     if ARGS.occurrences_of(name) > 0 {
         true
@@ -112,10 +117,16 @@ fn flag(name: &str) -> bool {
     }
 }
 
+/// Returns the string value, associated with the [name] option.
+/// Defined, if flag(name) is true.
+///
 fn sval(name: &str) -> &str {
     ARGS.value_of(name).unwrap_or("NULL_STR")
 }
 
+/// Returns the integer value, associated with the [name] option.
+/// Defined, if flag(name) is true.
+///
 fn ival(name: &str) -> i64 {
     ARGS.value_of(name)
         .unwrap_or("NULL_INT")
@@ -123,10 +134,15 @@ fn ival(name: &str) -> i64 {
         .expect("Option value must be a valid number!")
 }
 
+/// Returns the PathBuf value, associated with the [name] option.
+/// Defined, if flag(name) is true.
+///
 fn pval(name: &str) -> PathBuf {
     Path::new(sval(name)).canonicalize().unwrap()
 }
 
+/// Returns true, if album tag is present on the command line.
+///
 fn is_album_tag() -> bool {
     if flag("u") && !flag("m") {
         true
@@ -135,6 +151,9 @@ fn is_album_tag() -> bool {
     }
 }
 
+/// Returns album tag value.
+/// Defined, if is_album_tag() is true.
+///
 fn album_tag() -> &'static str {
     if flag("u") && !flag("m") {
         sval("u")
@@ -143,6 +162,9 @@ fn album_tag() -> &'static str {
     }
 }
 
+/// Sets up command line parser, and gets the command line
+/// options and arguments.
+///
 fn args_retrieve() -> ArgMatches<'static> {
     App::new("procrustes")
         .setting(AppSettings::ColoredHelp)
@@ -282,6 +304,9 @@ fn args_retrieve() -> ArgMatches<'static> {
         .get_matches()
 }
 
+/// Returns a vector of [dir] subdirectories, if [folders] is true,
+/// otherwise returns a vector of the audiofiles inside the [dir] directories.
+///
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
         .into_iter()
@@ -298,6 +323,8 @@ fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
 }
 
 #[allow(dead_code)]
+/// Returns a vector of the directories and files inside [dir].
+///
 fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
     fs::read_dir(dir)?
         .into_iter()
@@ -305,6 +332,8 @@ fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
         .collect()
 }
 
+/// Returns sorted vectors of directories and audiofiles inside [dir].
+///
 fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     if dir.is_file() && is_audiofile(dir) {
         return (vec![], vec![dir.to_path_buf()]);
@@ -312,19 +341,26 @@ fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     let mut dirs = fs_entries(dir, true).unwrap();
     let mut files = fs_entries(dir, false).unwrap();
     if flag("x") {
+        // Sort lexicographically.
         dirs.sort_unstable();
         files.sort_unstable();
     } else {
+        // Sort naturally.
         sort_path_slice(&mut dirs);
         sort_path_slice(&mut files);
     }
     if flag("r") {
+        // Reverse sorting order.
         dirs.reverse();
         files.reverse();
     }
     (dirs, files)
 }
 
+/// Walks down the [src_dir] tree, accumulating [dst_step] on each recursion level.
+/// Provides the source audiofiles and vectors of the steps down the destination tree
+/// to be created as subdirectories.
+///
 fn dir_walk(
     src_dir: &PathBuf,
     dst_step: Vec<PathBuf>,
@@ -688,10 +724,14 @@ impl GlobalState {
     }
 
     #[allow(dead_code)]
+    /// Adds an [entry] to the log, without borrowing.
+    ///
     fn logr(&mut self, entry: &str) {
         self.log.push(entry.to_string());
     }
 
+    /// Adds an [entry] to the log.
+    ///
     fn log(&mut self, entry: String) {
         self.log.push(entry);
     }
