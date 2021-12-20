@@ -851,7 +851,7 @@ fn initials(authors: &str) -> String {
         UnicodeSegmentation::graphemes(s, true).collect()
     }
 
-    fn form_initial(name: &str) -> String {
+    fn initial(name: &str) -> String {
         let cut: Vec<&str> = name.split("'").collect();
 
         if cut.len() > 1 && !cut[1].is_empty() {
@@ -900,7 +900,7 @@ fn initials(authors: &str) -> String {
                                     SPACE
                                         .split(barrel)
                                         .filter(|name| !name.is_empty())
-                                        .map(|name| form_initial(name)),
+                                        .map(|name| initial(name)),
                                     ".",
                                 )
                             }),
