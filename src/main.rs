@@ -44,23 +44,23 @@ const COLUMN_ICON: &str = "\u{002714}";
 const LINK_ICON: &str = "\u{0026a1}";
 
 lazy_static! {
-    static ref ARGS: ArgMatches<'static> = retrieve_args();
+    static ref ARGS: ArgMatches<'static> = args_retrieve();
 //    static ref IS_ALBUM: bool = is_album_tag();
 //    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
-    static ref DST_DIR: PathBuf = executive_dst();
+    static ref DST_DIR: PathBuf = dst_executive();
     static ref KNOWN_EXTENSIONS: [&'static str; 8] = [
         "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE",
     ];
     static ref INITIALS: String = if flag("a") {
-        make_initials(sval("a"))
+        initials(sval("a"))
     } else {
         "".to_string()
     };
 }
 
 // Calculates the destination directory according to options.
-fn executive_dst() -> PathBuf {
+fn dst_executive() -> PathBuf {
     let prefix = if flag("b") {
         format!("{:02}-", ival("b"))
     } else {
@@ -143,7 +143,7 @@ fn album_tag() -> &'static str {
     }
 }
 
-fn retrieve_args() -> ArgMatches<'static> {
+fn args_retrieve() -> ArgMatches<'static> {
     App::new("procrustes")
         .setting(AppSettings::ColoredHelp)
         .version("v1.0.3")
@@ -298,14 +298,14 @@ fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
 }
 
 #[allow(dead_code)]
-fn offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
+fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
     fs::read_dir(dir)?
         .into_iter()
         .map(|x| x.map(|entry| entry.path()))
         .collect()
 }
 
-fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
+fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     if dir.is_file() && is_audiofile(dir) {
         return (vec![], vec![dir.to_path_buf()]);
     }
@@ -325,17 +325,17 @@ fn groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     (dirs, files)
 }
 
-fn traverse_dir(
+fn dir_walk(
     src_dir: &PathBuf,
     dst_step: Vec<PathBuf>,
 ) -> Box<dyn Iterator<Item = (PathBuf, Vec<PathBuf>)>> {
-    let (dirs, files) = groom(src_dir);
+    let (dirs, files) = dir_groom(src_dir);
     let destination_step = dst_step.clone();
 
     let traverse = move |d: PathBuf| {
         let mut step = dst_step.clone();
         step.push(PathBuf::from(d.file_name().unwrap()));
-        traverse_dir(&d, step)
+        dir_walk(&d, step)
     };
     let handle = move |f: PathBuf| (f, destination_step.clone());
     if flag("r") {
@@ -355,7 +355,7 @@ fn traverse_dir(
 }
 
 impl GlobalState {
-    fn check_src(&mut self) {
+    fn src_check(&mut self) {
         let src = pval("src");
 
         if !src.exists() {
@@ -386,7 +386,7 @@ impl GlobalState {
         }
     }
 
-    fn check_dst(&self) {
+    fn dst_check(&self) {
         let dst = pval("dst-dir");
 
         if !dst.exists() {
@@ -429,7 +429,7 @@ impl GlobalState {
     }
 
     // Extracts file name from [src] and makes it pretty, if necessary.
-    fn decor(&self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
+    fn track_decorate(&self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
         if flag("s") && flag("t") {
             PathBuf::from(src.file_name().unwrap())
         } else {
@@ -465,8 +465,8 @@ impl GlobalState {
 
     // Calculates destination for [src] file to be copied to and
     // makes a copy.
-    fn copy(&mut self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) {
-        let file_name = self.decor(ii, src, step);
+    fn track_copy(&mut self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) {
+        let file_name = self.track_decorate(ii, src, step);
         let depth: PathBuf = if flag("t") {
             step.iter().collect()
         } else {
@@ -559,8 +559,8 @@ impl GlobalState {
         }
     }
 
-    fn copy_album(&mut self) {
-        self.check_dst();
+    fn album_copy(&mut self) {
+        self.dst_check();
 
         if self.tracks_total < 1 {
             println!("No audio files found at \"{}\"", SRC.display());
@@ -583,8 +583,8 @@ impl GlobalState {
             };
         }
 
-        for (i, (src, step)) in traverse_dir(&SRC, [].to_vec()).enumerate() {
-            self.copy(entry_num!(i), &src, &step);
+        for (i, (src, step)) in dir_walk(&SRC, [].to_vec()).enumerate() {
+            self.track_copy(entry_num!(i), &src, &step);
         }
         println!(
             " {} Done ({}, {}; {:.1}s).",
@@ -622,7 +622,7 @@ impl GlobalState {
                     if is_audiofile(&p) {
                         match &self.spinner {
                             Some(spinner) => {
-                                spinner.message(truncate_str(&(file_name + BDELIM_ICON), 72))
+                                spinner.message(str_shrink(&(file_name + BDELIM_ICON), 72))
                             }
                             _ => panic!(
                                 "{}GlobalState::spinner is already dead.{}",
@@ -645,7 +645,7 @@ impl GlobalState {
         (tracks, bytes)
     }
 
-    fn set_tracks_info(&mut self, dir: &Path) {
+    fn tracks_state_init(&mut self, dir: &Path) {
         let count = self.tracks_count(dir);
         self.tracks_total = count.0;
         self.bytes_total = count.1;
@@ -688,9 +688,9 @@ fn main() {
         bytes_total: 0,
     };
 
-    g.check_src();
+    g.src_check();
 
-    g.set_tracks_info(&SRC.as_path());
+    g.tracks_state_init(&SRC.as_path());
 
     // GlobalState ready.
 
@@ -710,7 +710,7 @@ fn main() {
         }
         println!("; Time: {:.1}s", g.now.elapsed().as_secs_f64())
     } else {
-        g.copy_album();
+        g.album_copy();
     }
     if g.suspicious_total > 0 {
         println!(
@@ -754,7 +754,10 @@ fn human_fine(bytes: u64) -> String {
     panic!("Fatal error: human_fine({}).", bytes)
 }
 
-fn truncate_str(s: &str, limit: usize) -> String {
+/// Shrinks [s] to the [limit], removing an arbitrary
+/// slice from the middle.
+///
+fn str_shrink(s: &str, limit: usize) -> String {
     let s: Vec<char> = s.chars().collect();
     let limit = cmp::max(10, limit);
     if s.len() > limit {
@@ -833,7 +836,7 @@ fn str_strip_numbers(s: &str) -> Vec<i64> {
 /// Returns a comma-separated list of initials,
 /// [authors] being a comma-separated list of full names.
 ///
-fn make_initials(authors: &str) -> String {
+fn initials(authors: &str) -> String {
     lazy_static! {
         static ref SPACE: Regex = Regex::new(r"[\s.]+").unwrap();
         static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();

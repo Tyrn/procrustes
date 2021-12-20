@@ -61,7 +61,7 @@ fn test_string() {
 }
 
 #[test]
-fn test_truncate_str() {
+fn test_str_shrink() {
     let lat1 = "The quick brown fox jumps over the lazy dog!";
     let cyr1 = "Однажды играли в карты у конногвардейца На..";
 
@@ -70,21 +70,21 @@ fn test_truncate_str() {
 
     assert_eq!(cyr1.chars().collect::<Vec<char>>().len(), 44);
 
-    assert_eq!(truncate_str(cyr1, 10), "Однаж ⚡ На..");
-    assert_eq!(truncate_str(lat1, 20), "The quick ⚡ lazy dog!");
-    assert_eq!(truncate_str(cyr1, 20), "Однажды иг ⚡ дейца На..");
-    assert_eq!(truncate_str(lat1, 30), "The quick brown ⚡ r the lazy dog!");
-    assert_eq!(truncate_str(cyr1, 30), "Однажды играли ⚡ огвардейца На..");
+    assert_eq!(str_shrink(cyr1, 10), "Однаж ⚡ На..");
+    assert_eq!(str_shrink(lat1, 20), "The quick ⚡ lazy dog!");
+    assert_eq!(str_shrink(cyr1, 20), "Однажды иг ⚡ дейца На..");
+    assert_eq!(str_shrink(lat1, 30), "The quick brown ⚡ r the lazy dog!");
+    assert_eq!(str_shrink(cyr1, 30), "Однажды играли ⚡ огвардейца На..");
     assert_eq!(
-        truncate_str(lat1, 43),
+        str_shrink(lat1, 43),
         "The quick brown fox j ⚡ ps over the lazy dog!"
     );
     assert_eq!(
-        truncate_str(cyr1, 43),
+        str_shrink(cyr1, 43),
         "Однажды играли в карт ⚡ у конногвардейца На.."
     );
-    assert_eq!(truncate_str(lat1, 44), lat1);
-    assert_eq!(truncate_str(cyr1, 44), cyr1);
+    assert_eq!(str_shrink(lat1, 44), lat1);
+    assert_eq!(str_shrink(cyr1, 44), cyr1);
 }
 
 #[test]
@@ -123,63 +123,54 @@ fn test_human_fine() {
 }
 
 #[test]
-fn test_make_initials() {
-    assert_eq!(make_initials(""), "");
-    assert_eq!(make_initials(" "), "");
-    assert_eq!(make_initials(".. , .. "), "");
-    assert_eq!(make_initials(" ,, .,"), "");
-    assert_eq!(make_initials(", a. g, "), "A.G.");
-    assert_eq!(make_initials("- , -I.V.-A,E.C.N-, ."), "I.V-A.,E.C.N.");
-    assert_eq!(make_initials("John ronald reuel Tolkien"), "J.R.R.T.");
-    assert_eq!(make_initials("  e.B.Sledge "), "E.B.S.");
-    assert_eq!(make_initials("Apsley Cherry-Garrard"), "A.C-G.");
-    assert_eq!(make_initials("Windsor Saxe-\tCoburg - Gotha"), "W.S-C-G.");
-    assert_eq!(make_initials("Elisabeth Kubler-- - Ross"), "E.K-R.");
+fn test_initials() {
+    assert_eq!(initials(""), "");
+    assert_eq!(initials(" "), "");
+    assert_eq!(initials(".. , .. "), "");
+    assert_eq!(initials(" ,, .,"), "");
+    assert_eq!(initials(", a. g, "), "A.G.");
+    assert_eq!(initials("- , -I.V.-A,E.C.N-, ."), "I.V-A.,E.C.N.");
+    assert_eq!(initials("John ronald reuel Tolkien"), "J.R.R.T.");
+    assert_eq!(initials("  e.B.Sledge "), "E.B.S.");
+    assert_eq!(initials("Apsley Cherry-Garrard"), "A.C-G.");
+    assert_eq!(initials("Windsor Saxe-\tCoburg - Gotha"), "W.S-C-G.");
+    assert_eq!(initials("Elisabeth Kubler-- - Ross"), "E.K-R.");
+    assert_eq!(initials("  Fitz-Simmons Ashton-Burke Leigh"), "F-S.A-B.L.");
+    assert_eq!(initials("Arleigh \"31-knot\"Burke "), "A.B.");
     assert_eq!(
-        make_initials("  Fitz-Simmons Ashton-Burke Leigh"),
-        "F-S.A-B.L."
-    );
-    assert_eq!(make_initials("Arleigh \"31-knot\"Burke "), "A.B.");
-    assert_eq!(
-        make_initials("Harry \"Bing\" Crosby, Kris \"Tanto\" Paronto"),
+        initials("Harry \"Bing\" Crosby, Kris \"Tanto\" Paronto"),
         "H.C.,K.P."
     );
     assert_eq!(
-        make_initials("William J. \"Wild Bill\" Donovan, Marta \"Cinta Gonzalez"),
+        initials("William J. \"Wild Bill\" Donovan, Marta \"Cinta Gonzalez"),
         "W.J.D.,M.C.G."
     );
+    assert_eq!(initials("язон динАльт, шарль д'Артаньян"), "Я.динА.,Ш.д'А.");
+    assert_eq!(initials("шарль д'артаньян"), "Ш.Д.");
     assert_eq!(
-        make_initials("язон динАльт, шарль д'Артаньян"),
-        "Я.динА.,Ш.д'А."
-    );
-    assert_eq!(make_initials("шарль д'артаньян"), "Ш.Д.");
-    assert_eq!(
-        make_initials("Charles de Batz de Castelmore d'Artagnan"),
+        initials("Charles de Batz de Castelmore d'Artagnan"),
         "C.d.B.d.C.d'A."
     );
     assert_eq!(
-        make_initials("Mario Del Monaco, Hutchinson of London"),
+        initials("Mario Del Monaco, Hutchinson of London"),
         "M.D.M.,H.o.L."
     );
-    assert_eq!(make_initials("Anselm haut Rodric"), "A.h.R.");
-    assert_eq!(make_initials("Ансельм от Родрик"), "А.о.Р.");
-    assert_eq!(make_initials("Leonardo Wilhelm DiCaprio"), "L.W.DiC.");
-    assert_eq!(make_initials("De Beers, Guido van Rossum"), "D.B.,G.v.R.");
-    assert_eq!(make_initials("Манфред фон Рихтгофен"), "М.ф.Р.");
-    assert_eq!(make_initials("Armand Jean du Plessis"), "A.J.d.P.");
-    assert_eq!(make_initials("a.s.,b.s."), "A.S.,B.S.");
-    assert_eq!(make_initials("A. Strugatsky, B...Strugatsky."), "A.S.,B.S.");
-    assert_eq!(make_initials("Иржи Кропачек,, йозеф Новотный"), "И.К.,Й.Н.");
-    assert_eq!(make_initials("Rory O'Connor"), "R.O'C.");
-    assert_eq!(make_initials("Öwyn Do'Üwr"), "Ö.Do'Ü.");
-    assert_eq!(make_initials("öwyn Do'üwr"), "Ö.D.");
-    assert_eq!(make_initials("'"), "'.");
-    assert_eq!(make_initials("Jason dinAlt"), "J.dinA.");
-    assert_eq!(make_initials("Jackie McGee"), "J.McG.");
-    assert_eq!(make_initials("Ross Macdonald"), "R.M.");
-    assert_eq!(make_initials("DAMadar"), "DA.");
-    assert_eq!(
-        make_initials("johannes diderik van der waals"),
-        "J.D.v.d.W."
-    );
+    assert_eq!(initials("Anselm haut Rodric"), "A.h.R.");
+    assert_eq!(initials("Ансельм от Родрик"), "А.о.Р.");
+    assert_eq!(initials("Leonardo Wilhelm DiCaprio"), "L.W.DiC.");
+    assert_eq!(initials("De Beers, Guido van Rossum"), "D.B.,G.v.R.");
+    assert_eq!(initials("Манфред фон Рихтгофен"), "М.ф.Р.");
+    assert_eq!(initials("Armand Jean du Plessis"), "A.J.d.P.");
+    assert_eq!(initials("a.s.,b.s."), "A.S.,B.S.");
+    assert_eq!(initials("A. Strugatsky, B...Strugatsky."), "A.S.,B.S.");
+    assert_eq!(initials("Иржи Кропачек,, йозеф Новотный"), "И.К.,Й.Н.");
+    assert_eq!(initials("Rory O'Connor"), "R.O'C.");
+    assert_eq!(initials("Öwyn Do'Üwr"), "Ö.Do'Ü.");
+    assert_eq!(initials("öwyn Do'üwr"), "Ö.D.");
+    assert_eq!(initials("'"), "'.");
+    assert_eq!(initials("Jason dinAlt"), "J.dinA.");
+    assert_eq!(initials("Jackie McGee"), "J.McG.");
+    assert_eq!(initials("Ross Macdonald"), "R.M.");
+    assert_eq!(initials("DAMadar"), "DA.");
+    assert_eq!(initials("johannes diderik van der waals"), "J.D.v.d.W.");
 }
