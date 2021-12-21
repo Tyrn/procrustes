@@ -1,4 +1,6 @@
-use spinners;
+use crate::{str_shrink, BDELIM_ICON};
+use spinners as pretty;
+use terminal_spinners as cute;
 
 pub trait Spinner {
     fn new() -> Self;
@@ -7,23 +9,22 @@ pub trait Spinner {
 }
 
 pub struct PrettySpinner {
-    spinner: Option<spinners::Spinner>,
+    spinner: Option<pretty::Spinner>,
 }
 
 impl Spinner for PrettySpinner {
     fn new() -> Self {
         Self {
-            spinner: Some(spinners::Spinner::new(&spinners::Spinners::Moon, "".into())),
+            spinner: Some(pretty::Spinner::new(&pretty::Spinners::Moon, "".into())),
         }
     }
 
     fn message(&self, line: String) {
         match &self.spinner {
-            Some(spinner) => spinner.message(crate::str_shrink(&(line + crate::BDELIM_ICON), 72)),
+            Some(spinner) => spinner.message(str_shrink(&(line + BDELIM_ICON), 72)),
             _ => panic!(
                 "{}PrettySpinner::spinner is already None.{}",
-                crate::BDELIM_ICON,
-                crate::BDELIM_ICON,
+                BDELIM_ICON, BDELIM_ICON,
             ),
         };
     }
@@ -33,5 +34,39 @@ impl Spinner for PrettySpinner {
             spinner.stop();
         }
         println!("");
+    }
+}
+
+pub struct CuteSpinner {
+    spinner: Option<cute::SpinnerHandle>,
+}
+
+impl Spinner for CuteSpinner {
+    fn new() -> Self {
+        Self {
+            spinner: Some(
+                cute::SpinnerBuilder::new()
+                    .spinner(&cute::DOTS)
+                    .text("Unicorns!")
+                    .prefix("  ")
+                    .start(),
+            ),
+        }
+    }
+
+    fn message(&self, line: String) {
+        match &self.spinner {
+            Some(spinner) => spinner.text(str_shrink(&(line + BDELIM_ICON), 72)),
+            _ => panic!(
+                "{}CuteSpinner::spinner is already None.{}",
+                BDELIM_ICON, BDELIM_ICON,
+            ),
+        };
+    }
+
+    fn stop(&mut self) {
+        if let Some(spinner) = self.spinner.take() {
+            spinner.done();
+        }
     }
 }
