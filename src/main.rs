@@ -2,13 +2,13 @@
 extern crate lazy_static;
 
 mod spinner;
+use spinner::{PrettySpinner, Spinner};
 
 use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use glob;
 use itertools::join;
 use regex::Regex;
-use spinners::{Spinner, Spinners};
 use std::{
     cmp,
     ffi::OsStr,
@@ -683,15 +683,7 @@ impl GlobalState {
                         String::from(&p.file_name().unwrap().to_str().unwrap().to_string());
 
                     if is_audiofile(&p) {
-                        match &self.spinner {
-                            Some(spinner) => {
-                                spinner.message(str_shrink(&(file_name + BDELIM_ICON), 72))
-                            }
-                            _ => panic!(
-                                "{}GlobalState::spinner is already dead.{}",
-                                BDELIM_ICON, BDELIM_ICON,
-                            ),
-                        };
+                        self.spinner.message(file_name);
                         bytes += &p.metadata().unwrap().len();
                         1
                     } else {
@@ -719,10 +711,7 @@ impl GlobalState {
         self.bytes_total = count.1;
         self.width = format!("{}", self.tracks_total).len();
 
-        if let Some(spinner) = self.spinner.take() {
-            spinner.stop();
-        }
-        println!("");
+        self.spinner.stop();
     }
 
     #[allow(dead_code)]
@@ -740,7 +729,7 @@ impl GlobalState {
 }
 
 struct GlobalState {
-    pub spinner: Option<Spinner>,
+    pub spinner: PrettySpinner,
     pub now: Instant,
     pub log: Vec<String>,
     pub width: usize, // Digits in tracks_total, e.g. 3 if tracks_total is 739.
@@ -751,7 +740,7 @@ struct GlobalState {
 
 fn main() {
     let mut g = GlobalState {
-        spinner: Some(Spinner::new(&Spinners::Moon, "".into())),
+        spinner: PrettySpinner::new(),
         now: Instant::now(),
         log: Vec::new(),
         width: 2,
