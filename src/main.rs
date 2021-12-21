@@ -1,6 +1,8 @@
 #[macro_use]
 extern crate lazy_static;
 
+mod spinner;
+
 use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use glob;
@@ -359,7 +361,7 @@ fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
 
 /// Walks down the (source) [dir] tree, accumulating [step_down] on each recursion level.
 /// Item is a tuple of
-/// (audiofile, Vec(subdirectory {to be created at destination/to make it possible})).
+/// (audiofile, Vec<subdirectory (to be created at destination/to make it possible)>).
 ///
 fn dir_walk(
     dir: &PathBuf,
