@@ -2,8 +2,8 @@
 extern crate lazy_static;
 
 mod spinner;
-use spinner::{Spinner};
-use spinner as spin;
+use crate::spinner as spin;
+use crate::spinner::Spinner;
 
 use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
@@ -730,7 +730,7 @@ impl GlobalState {
 }
 
 struct GlobalState {
-    pub spinner: spin::CuteSpinner,
+    pub spinner: spin::DaddySpinner,
     pub now: Instant,
     pub log: Vec<String>,
     pub width: usize, // Digits in tracks_total, e.g. 3 if tracks_total is 739.
@@ -741,7 +741,7 @@ struct GlobalState {
 
 fn main() {
     let mut g = GlobalState {
-        spinner: spin::CuteSpinner::new(),
+        spinner: spin::DaddySpinner::new(),
         now: Instant::now(),
         log: Vec::new(),
         width: 2,

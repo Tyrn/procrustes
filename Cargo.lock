@@ -316,6 +316,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "regex",
+ "spinner",
  "spinners",
  "taglib",
  "terminal-spinners",
