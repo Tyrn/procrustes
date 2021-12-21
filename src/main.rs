@@ -357,35 +357,35 @@ fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     (dirs, files)
 }
 
-/// Walks down the [src_dir] tree, accumulating [dst_step] on each recursion level.
-/// Provides the source audiofiles and vectors of the steps down the destination tree
-/// to be created as subdirectories.
+/// Walks down the (source) [dir] tree, accumulating [step_down] on each recursion level.
+/// Item is a tuple of
+/// (audiofile, Vec(subdirectory {to be created at destination/to make it possible})).
 ///
 fn dir_walk(
-    src_dir: &PathBuf,
-    dst_step: Vec<PathBuf>,
+    dir: &PathBuf,
+    step_down: Vec<PathBuf>,
 ) -> Box<dyn Iterator<Item = (PathBuf, Vec<PathBuf>)>> {
-    let (dirs, files) = dir_groom(src_dir);
-    let destination_step = dst_step.clone();
+    let (dirs, files) = dir_groom(dir);
+    let step = step_down.clone();
 
-    let traverse = move |d: PathBuf| {
-        let mut step = dst_step.clone();
+    let walk = move |d: PathBuf| {
+        let mut step = step_down.clone();
         step.push(PathBuf::from(d.file_name().unwrap()));
         dir_walk(&d, step)
     };
-    let handle = move |f: PathBuf| (f, destination_step.clone());
+    let item = move |f: PathBuf| (f, step.clone());
     if flag("r") {
         Box::new(
             files
                 .into_iter()
-                .map(handle)
-                .chain(dirs.into_iter().flat_map(traverse)),
+                .map(item)
+                .chain(dirs.into_iter().flat_map(walk)),
         )
     } else {
         Box::new(
             dirs.into_iter()
-                .flat_map(traverse)
-                .chain(files.into_iter().map(handle)),
+                .flat_map(walk)
+                .chain(files.into_iter().map(item)),
         )
     }
 }
