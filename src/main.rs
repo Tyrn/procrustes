@@ -741,7 +741,7 @@ struct GlobalState {
 
 fn main() {
     let mut g = GlobalState {
-        spinner: spin::DaddySpinner::new(),
+        spinner: Spinner::new(),
         now: Instant::now(),
         log: Vec::new(),
         width: 2,
