@@ -16,6 +16,16 @@ impl Shrinker for String {
     }
 }
 
+pub struct DummySpinner {}
+
+impl Spinner for DummySpinner {
+    fn new() -> Self {
+        Self {}
+    }
+    fn message(&self, _line: String) {}
+    fn stop(&mut self) {}
+}
+
 pub trait Spinner {
     fn new() -> Self;
     fn message(&self, line: String);
