@@ -628,6 +628,9 @@ impl GlobalState {
 
         let dst = DST_DIR.join(&depth).join(&file_name);
 
+        let src_bytes: u64 = src.metadata().unwrap().len();
+        let mut dst_bytes: u64 = 0;
+
         // All the copying and tagging happens here.
         if !flag("y") {
             if dst.is_file() {
@@ -638,11 +641,12 @@ impl GlobalState {
                 ));
             } else {
                 self.file_copy_and_set_tags_via_tmp(ii, &src, &dst);
+                dst_bytes = dst.metadata().unwrap().len();
             }
         }
 
         if flag("v") {
-            println!(
+            print!(
                 "{:1$}/{2} {3} {4}",
                 ii,
                 self.width,
@@ -650,6 +654,20 @@ impl GlobalState {
                 COLUMN_ICON,
                 &dst.to_str().unwrap()
             );
+            if dst_bytes != src_bytes {
+                if dst_bytes == 0 {
+                    print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
+                } else {
+                    let growth = dst_bytes - src_bytes;
+
+                    if growth > 100_000 {
+                        print!("  {} {}", COLUMN_ICON, human_fine(growth));
+                    } else {
+                        print!("  {} {:+}", COLUMN_ICON, growth);
+                    }
+                }
+            }
+            println!("");
         } else {
             print!(".");
             io::stdout().flush().unwrap();
