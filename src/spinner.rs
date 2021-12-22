@@ -95,11 +95,11 @@ impl Spinner for PrettySpinner {
     }
 }
 
-pub struct CuteSpinner {
+pub struct CutieSpinner {
     spinner: Option<cute::SpinnerHandle>,
 }
 
-impl Spinner for CuteSpinner {
+impl Spinner for CutieSpinner {
     fn new() -> Self {
         Self {
             spinner: Some(
@@ -115,7 +115,7 @@ impl Spinner for CuteSpinner {
     fn message(&self, line: String) {
         match &self.spinner {
             Some(spinner) => spinner.text(line.shrink_pretty()),
-            _ => panic!("{}", self.adieu("CuteSpinner")),
+            _ => panic!("{}", self.adieu("CutieSpinner")),
         };
     }
 

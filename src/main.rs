@@ -53,7 +53,7 @@ lazy_static! {
     static ref SRC: PathBuf = pval("src");
     static ref DST_DIR: PathBuf = dst_executive();
     static ref KNOWN_EXTENSIONS: [&'static str; 8] = [
-        "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE",
+        "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",
     ];
     static ref INITIALS: String = if flag("a") {
         initials(sval("a"))
