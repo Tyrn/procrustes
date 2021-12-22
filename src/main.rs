@@ -446,9 +446,10 @@ impl GlobalState {
                 if flag("w") {
                     fs::remove_dir_all(&DST_DIR.as_path()).expect(
                         format!(
-                            " {} Failed to remove destination directory \"{}\".",
-                            WARNING_ICON,
-                            DST_DIR.display()
+                            "{}Failed to remove destination directory \"{}\".{}",
+                            BDELIM_ICON,
+                            DST_DIR.display(),
+                            BDELIM_ICON,
                         )
                         .as_str(),
                     );
@@ -463,9 +464,10 @@ impl GlobalState {
             }
             fs::create_dir(&DST_DIR.as_path()).expect(
                 format!(
-                    " {} Destination directory \"{}\" already exists!",
-                    WARNING_ICON,
-                    DST_DIR.display()
+                    "{}Destination directory \"{}\" already exists!{}",
+                    BDELIM_ICON,
+                    DST_DIR.display(),
+                    BDELIM_ICON,
                 )
                 .as_str(),
             );
@@ -677,7 +679,11 @@ impl GlobalState {
         self.dst_check();
 
         if self.tracks_total < 1 {
-            println!("No audio files found at \"{}\"", SRC.display());
+            println!(
+                " {} No audio files found at \"{}\"",
+                WARNING_ICON,
+                SRC.display()
+            );
             exit(1);
         }
 
@@ -876,7 +882,10 @@ fn human_fine(bytes: u64) -> String {
             (unit, 0) => format!("{:.0}{}", quotient, unit),
             (unit, 1) => format!("{:.1}{}", quotient, unit),
             (unit, 2) => format!("{:.2}{}", quotient, unit),
-            _ => panic!("Fatal error: human_fine(): unexpected decimals count."),
+            _ => panic!(
+                "{}Fatal error: human_fine(): unexpected decimals count.{}",
+                BDELIM_ICON, BDELIM_ICON
+            ),
         };
     }
     if bytes == 0 {
@@ -885,7 +894,10 @@ fn human_fine(bytes: u64) -> String {
     if bytes == 1 {
         return "1".to_string();
     }
-    panic!("Fatal error: human_fine({}).", bytes)
+    panic!(
+        "{}Fatal error: human_fine({}).{}",
+        BDELIM_ICON, bytes, BDELIM_ICON
+    )
 }
 
 /// Shrinks [s] to the [limit], removing an arbitrary
