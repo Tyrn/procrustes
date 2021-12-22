@@ -776,14 +776,14 @@ fn main() {
 
         // Second pass through the source done, all the tracks, if any, copied to destination.
     }
+    for s in g.log {
+        println!("{}", s);
+    }
     if g.suspicious_total > 0 {
         println!(
             " {} Suspicious, skipped: {} file(s)",
             SUSPICIOUS_ICON, g.suspicious_total
         );
-    }
-    for s in g.log {
-        println!("{}", s);
     }
 
     // Final report done.
