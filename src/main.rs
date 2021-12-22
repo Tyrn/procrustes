@@ -507,8 +507,48 @@ impl GlobalState {
         }
     }
 
+    /// Sets tags to [dst] track, using [ii] and [src] name for the title tag
+    /// composition.
+    ///
     fn track_set_tags(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
+        let tag_file = taglib::File::new(&dst).expect(
+            format!(
+                " {} Error while opening \"{}\" for tagging.",
+                WARNING_ICON,
+                &dst.to_str().unwrap(),
+            )
+            .as_str(),
+        );
+        let mut tag = tag_file.tag().expect("No tagging data.");
 
+        // Calculates the contents for the title tag.
+        let title = |s: &str| -> String {
+            let stem = &src.file_stem().unwrap().to_str().unwrap();
+            if flag("F") {
+                format!("{}>{}", ii, &stem)
+            } else if flag("f") {
+                stem.to_string()
+            } else {
+                format!("{} {}", ii, s)
+            }
+        };
+
+        if !flag("d") {
+            tag.set_track(ii as u32);
+        }
+        if flag("a") && is_album_tag() {
+            tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), album_tag())));
+            tag.set_artist(sval("a"));
+            tag.set_album(album_tag());
+        } else if flag("a") {
+            tag.set_title(&title(sval("a")));
+            tag.set_artist(sval("a"));
+        } else if is_album_tag() {
+            tag.set_title(&title(album_tag()));
+            tag.set_album(album_tag());
+        }
+
+        tag_file.save();
     }
 
     /// Calculates destination for the [src] track to be copied to and
@@ -552,45 +592,7 @@ impl GlobalState {
                     .as_str(),
                 );
             }
-
-            let tag_file = taglib::File::new(&dst).expect(
-                format!(
-                    " {} Error while opening \"{}\" for tagging.",
-                    WARNING_ICON,
-                    &dst.to_str().unwrap(),
-                )
-                .as_str(),
-            );
-            let mut tag = tag_file.tag().expect("No tagging data.");
-
-            // Calculates the contents for the title tag.
-            let title = |s: &str| -> String {
-                let stem = &src.file_stem().unwrap().to_str().unwrap();
-                if flag("F") {
-                    format!("{}>{}", ii, &stem)
-                } else if flag("f") {
-                    stem.to_string()
-                } else {
-                    format!("{} {}", ii, s)
-                }
-            };
-
-            if !flag("d") {
-                tag.set_track(ii as u32);
-            }
-            if flag("a") && is_album_tag() {
-                tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), album_tag())));
-                tag.set_artist(sval("a"));
-                tag.set_album(album_tag());
-            } else if flag("a") {
-                tag.set_title(&title(sval("a")));
-                tag.set_artist(sval("a"));
-            } else if is_album_tag() {
-                tag.set_title(&title(album_tag()));
-                tag.set_album(album_tag());
-            }
-
-            tag_file.save();
+            self.track_set_tags(ii, &src, &dst);
         }
 
         if flag("v") {
