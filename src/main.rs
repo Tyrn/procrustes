@@ -472,42 +472,6 @@ impl GlobalState {
         }
     }
 
-    /// Extracts file name from the [src] track number [ii]
-    /// and makes it pretty, if necessary.
-    fn track_decorate(&self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
-        if flag("s") && flag("t") {
-            PathBuf::from(src.file_name().unwrap())
-        } else {
-            let prefix = if flag("i") && !flag("t") {
-                if step.len() > 0 {
-                    let lines = step.iter().map(|p| p.to_str().unwrap());
-                    let chain = join(lines, "-");
-                    format!("{:01$}-[{2}]", ii, self.width, chain)
-                } else {
-                    format!("{:01$}", ii, self.width)
-                }
-            } else {
-                format!("{:01$}", ii, self.width)
-            };
-
-            if flag("u") {
-                let ext = src.extension().unwrap();
-                let name = format!(
-                    "{}-{}{}.{}",
-                    prefix,
-                    sval("u"),
-                    artist(true),
-                    ext.to_str().unwrap()
-                );
-                PathBuf::from(name)
-            } else {
-                let fnm = src.file_name().unwrap();
-                let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
-                PathBuf::from(name)
-            }
-        }
-    }
-
     /// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
     /// composition.
     ///
@@ -582,11 +546,11 @@ impl GlobalState {
     /// Copies [src] to [dst], sets tags using a temporary file.
     ///
     fn file_copy_and_set_tags_via_tmp(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
-        let ext = &src.extension().unwrap();
         let tmp_dir = TempDir::new().unwrap(); // Keep it!
-        let tmp = tmp_dir
-            .path()
-            .join(format!("tmpaudio.{}", ext.to_str().unwrap()));
+        let tmp = tmp_dir.path().join(format!(
+            "tmpaudio.{}",
+            &src.extension().unwrap().to_str().unwrap()
+        ));
 
         self.file_copy(&src, &tmp);
         self.file_set_tags(ii, &src, &tmp);
@@ -603,6 +567,42 @@ impl GlobalState {
         );
     }
 
+    /// Extracts file name from the [src] track number [ii]
+    /// and makes it pretty, if necessary.
+    fn track_decorate(&self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
+        if flag("s") && flag("t") {
+            PathBuf::from(src.file_name().unwrap())
+        } else {
+            let prefix = if flag("i") && !flag("t") {
+                if step.len() > 0 {
+                    let lines = step.iter().map(|p| p.to_str().unwrap());
+                    let chain = join(lines, "-");
+                    format!("{:01$}-[{2}]", ii, self.width, chain)
+                } else {
+                    format!("{:01$}", ii, self.width)
+                }
+            } else {
+                format!("{:01$}", ii, self.width)
+            };
+
+            if flag("u") {
+                let ext = src.extension().unwrap();
+                let name = format!(
+                    "{}-{}{}.{}",
+                    prefix,
+                    sval("u"),
+                    artist(true),
+                    ext.to_str().unwrap()
+                );
+                PathBuf::from(name)
+            } else {
+                let fnm = src.file_name().unwrap();
+                let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
+                PathBuf::from(name)
+            }
+        }
+    }
+
     /// Calculates destination for the [src] track to be copied to and
     /// makes the copy of the valid track number [ii].
     ///
@@ -617,9 +617,10 @@ impl GlobalState {
             let dst_dir = DST_DIR.join(&depth);
             fs::create_dir_all(&dst_dir).expect(
                 format!(
-                    " {} Error while creating \"{}\" directory.",
-                    WARNING_ICON,
+                    "{}Error while creating \"{}\" directory.{}",
+                    BDELIM_ICON,
                     &dst_dir.to_str().unwrap(),
+                    BDELIM_ICON,
                 )
                 .as_str(),
             );
