@@ -8,6 +8,7 @@ use crate::spinner::Spinner;
 use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use glob;
+use tempfile::NamedTempFile;
 use itertools::join;
 use regex::Regex;
 use std::{
@@ -507,7 +508,7 @@ impl GlobalState {
         }
     }
 
-    /// Sets tags to [dst] track, using [ii] and [src] name for the title tag
+    /// Sets tags to [dst] track, using [ii] and [src] name in the title tag
     /// composition.
     ///
     fn track_set_tags(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
@@ -521,7 +522,7 @@ impl GlobalState {
         );
         let mut tag = tag_file.tag().expect("No tagging data.");
 
-        // Calculates the contents for the title tag.
+        // Calculates the composition of the title tag.
         let title = |s: &str| -> String {
             let stem = &src.file_stem().unwrap().to_str().unwrap();
             if flag("F") {
@@ -572,6 +573,18 @@ impl GlobalState {
                 .as_str(),
             );
         }
+
+        fn file_copy(src: &PathBuf, dst: &PathBuf) {
+            fs::copy(&src, &dst).expect(
+                format!(
+                    " {} Error while copying \"{}\" file.",
+                    WARNING_ICON,
+                    &dst.to_str().unwrap()
+                )
+                    .as_str(),
+            );
+        }
+
         let dst = DST_DIR.join(&depth).join(&file_name);
 
         // All the copying and tagging happens here.
@@ -583,14 +596,7 @@ impl GlobalState {
                     &dst.file_name().unwrap().to_str().unwrap()
                 ));
             } else {
-                fs::copy(&src, &dst).expect(
-                    format!(
-                        " {} Error while copying \"{}\" file.",
-                        WARNING_ICON,
-                        &dst.to_str().unwrap()
-                    )
-                    .as_str(),
-                );
+                file_copy(&src, &dst);
             }
             self.track_set_tags(ii, &src, &dst);
         }
