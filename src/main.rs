@@ -658,13 +658,9 @@ impl GlobalState {
                 if dst_bytes == 0 {
                     print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
                 } else {
-                    let growth = dst_bytes - src_bytes;
+                    let growth = dst_bytes as i64 - src_bytes as i64;
 
-                    if growth > 100_000 {
-                        print!("  {} {}", COLUMN_ICON, human_fine(growth));
-                    } else {
-                        print!("  {} {:+}", COLUMN_ICON, growth);
-                    }
+                    print!("  {} {:+}", COLUMN_ICON, growth);
                 }
             }
             println!("");
