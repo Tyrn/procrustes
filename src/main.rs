@@ -507,6 +507,10 @@ impl GlobalState {
         }
     }
 
+    fn track_set_tags(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
+
+    }
+
     /// Calculates destination for the [src] track to be copied to and
     /// makes the copy of the valid track number [ii].
     ///
