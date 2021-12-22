@@ -570,6 +570,7 @@ impl GlobalState {
         );
     }
 
+    #[allow(dead_code)]
     /// Copies [src] to [dst], sets tags to [dst].
     ///
     fn file_copy_and_set_tags(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
@@ -582,9 +583,8 @@ impl GlobalState {
     ///
     fn file_copy_and_set_tags_via_tmp(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
         let ext = &src.extension().unwrap();
-        let tmp_dir = TempDir::new();
+        let tmp_dir = TempDir::new().unwrap(); // Keep it!
         let tmp = tmp_dir
-            .unwrap()
             .path()
             .join(format!("tmpaudio.{}", ext.to_str().unwrap()));
 
@@ -636,7 +636,7 @@ impl GlobalState {
                     &dst.file_name().unwrap().to_str().unwrap()
                 ));
             } else {
-                self.file_copy_and_set_tags(ii, &src, &dst);
+                self.file_copy_and_set_tags_via_tmp(ii, &src, &dst);
             }
         }
 
