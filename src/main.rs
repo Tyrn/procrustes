@@ -39,9 +39,10 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     \n\n<src> as a single file: \
     \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg .";
 
+// const INVALID_ICON: &str = "\u{00274c}";
 const WARNING_ICON: &str = "\u{01f4a7}";
 const BDELIM_ICON: &str = "\u{01f539}";
-// const INVALID_ICON: &str = "\u{00274c}";
+const RSUSP_ICON: &str = "\u{002753}";
 const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
 const COLUMN_ICON: &str = "\u{002714}";
@@ -854,7 +855,7 @@ fn main() {
     if g.suspicious_total > 0 {
         println!(
             " {} Suspicious, skipped: {} file(s)",
-            SUSPICIOUS_ICON, g.suspicious_total
+            RSUSP_ICON, g.suspicious_total
         );
     }
 
