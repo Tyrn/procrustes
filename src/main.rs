@@ -813,6 +813,9 @@ struct GlobalState {
 }
 
 fn main() {
+    lazy_static::initialize(&ARGS); // Make sure arguments are handled at this point.
+                                    // let _ = *ARGS; // This magic works just as nice.
+
     let mut g = GlobalState {
         spinner: Spinner::new(),
         now: Instant::now(),
