@@ -50,13 +50,12 @@ const LINK_ICON: &str = "\u{0026a1}";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = args_retrieve();
-//    static ref IS_ALBUM: bool = is_album_tag();
-//    static ref ALBUM: &'static str = album_tag();
+    static ref IS_ALBUM: bool = is_album_tag();
+    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
     static ref DST_DIR: PathBuf = dst_executive();
-    static ref KNOWN_EXTENSIONS: [&'static str; 9] = [
-        "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",
-    ];
+    static ref KNOWN_EXTENSIONS: [&'static str; 9] =
+        ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
     static ref INITIALS: String = if flag("a") {
         initials(sval("a"))
     } else {
@@ -507,16 +506,16 @@ impl GlobalState {
         if !flag("d") {
             tag.set_track(ii as u32);
         }
-        if flag("a") && is_album_tag() {
-            tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), album_tag())));
+        if flag("a") && *IS_ALBUM {
+            tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), *ALBUM)));
             tag.set_artist(sval("a"));
-            tag.set_album(album_tag());
+            tag.set_album(*ALBUM);
         } else if flag("a") {
             tag.set_title(&title(sval("a")));
             tag.set_artist(sval("a"));
-        } else if is_album_tag() {
-            tag.set_title(&title(album_tag()));
-            tag.set_album(album_tag());
+        } else if *IS_ALBUM {
+            tag.set_title(&title(*ALBUM));
+            tag.set_album(*ALBUM);
         }
 
         tag_file.save();

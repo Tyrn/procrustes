@@ -7,7 +7,11 @@ Development
 ===========
 
 - `Format Rust code <https://github.com/rust-lang/rustfmt>`__
-- `Dealing with spinners <https://users.rust-lang.org/t/compilation-partially-moved-due-to-this-method-call/68972>`__
+- `TagLib <https://github.com/taglib/taglib>`__ library, release build, is required on the system. For the Archlinux family available on AUR:
+
+::
+
+    $ yay -S taglib-git
 
 Build
 -----
