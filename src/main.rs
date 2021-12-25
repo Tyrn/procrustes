@@ -59,6 +59,11 @@ lazy_static! {
     } else {
         "".to_string()
     };
+    static ref TAG_SET_TRACK: fn(&mut taglib::Tag, usize) = if flag("d") {
+        tag_nop_track
+    } else {
+        tag_set_track
+    };
     static ref TITLE_ARG: String = if flag("a") && is_album_tag() {
         format!("{} - {}", INITIALS.as_str(), album_tag())
     } else if flag("a") {
@@ -67,6 +72,16 @@ lazy_static! {
         album_tag().to_string()
     } else {
         "".to_string()
+    };
+    static ref TITLE: fn(usize, &PathBuf) -> String = title;
+    static ref TAG_SET_ALL: fn(&mut taglib::Tag, usize, &PathBuf) = if flag("a") && is_album_tag() {
+        tag_set_artist_album
+    } else if flag("a") {
+        tag_set_artist
+    } else if is_album_tag() {
+        tag_set_album
+    } else {
+        tag_nop_all
     };
 }
 
@@ -413,6 +428,30 @@ fn title(ii: usize, src: &PathBuf) -> String {
     }
 }
 
+fn tag_set_track(tag: &mut taglib::Tag, ii: usize) {
+    tag.set_track(ii as u32);
+}
+
+fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
+
+fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    tag.set_title(&TITLE(ii, &src));
+    tag.set_artist(sval("a"));
+    tag.set_album(album_tag());
+}
+
+fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    tag.set_title(&TITLE(ii, &src));
+    tag.set_artist(sval("a"));
+}
+
+fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    tag.set_title(&TITLE(ii, &src));
+    tag.set_album(album_tag());
+}
+
+fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
+
 impl GlobalState {
     /// Checks the source validity, and its compatibility with the destination.
     ///
@@ -510,20 +549,8 @@ impl GlobalState {
             .tag()
             .expect(format!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON,).as_str());
 
-        if !flag("d") {
-            tag.set_track(ii as u32);
-        }
-        if flag("a") && is_album_tag() {
-            tag.set_title(&title(ii, &src));
-            tag.set_artist(sval("a"));
-            tag.set_album(album_tag());
-        } else if flag("a") {
-            tag.set_title(&title(ii, &src));
-            tag.set_artist(sval("a"));
-        } else if is_album_tag() {
-            tag.set_title(&title(ii, &src));
-            tag.set_album(album_tag());
-        }
+        TAG_SET_TRACK(&mut tag, ii);
+        TAG_SET_ALL(&mut tag, ii, &src);
 
         tag_file.save();
     }
