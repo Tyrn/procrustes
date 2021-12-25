@@ -74,7 +74,7 @@ lazy_static! {
     } else {
         tag_set_track
     };
-    static ref TITLE_ARG: String = if flag("a") && is_album_tag() {
+    static ref TITLE_TAIL: String = if flag("a") && is_album_tag() {
         format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
     } else if flag("a") {
         ARTIST.to_string()
@@ -83,7 +83,13 @@ lazy_static! {
     } else {
         "".to_string()
     };
-    static ref TITLE: fn(usize, &PathBuf) -> String = title;
+    static ref TITLE_COMPOSE: fn(usize, &PathBuf) -> String = if flag("F") {
+        title_fi
+    } else if flag("f") {
+        title_f
+    } else {
+        title_i
+    };
     static ref TAG_SET_ALL: fn(&mut taglib::Tag, usize, &PathBuf) = if flag("a") && is_album_tag() {
         tag_set_artist_album
     } else if flag("a") {
@@ -198,16 +204,22 @@ fn album_tag() -> &'static str {
     }
 }
 
-// Calculates the composition of the title tag.
-fn title(ii: usize, src: &PathBuf) -> String {
+// Title tag calculation callbacks.
+
+fn title_fi(ii: usize, src: &PathBuf) -> String {
     let stem = &src.file_stem().unwrap().to_str().unwrap();
-    if flag("F") {
-        format!("{}>{}", ii, &stem)
-    } else if flag("f") {
-        stem.to_string()
-    } else {
-        format!("{} {}", ii, TITLE_ARG.to_string())
-    }
+
+    format!("{}>{}", ii, &stem)
+}
+
+fn title_f(_ii: usize, src: &PathBuf) -> String {
+    let stem = &src.file_stem().unwrap().to_str().unwrap();
+
+    stem.to_string()
+}
+
+fn title_i(ii: usize, _src: &PathBuf) -> String {
+    format!("{} {}", ii, TITLE_TAIL.to_string())
 }
 
 // Tag setting callbacks, see global static.
@@ -219,18 +231,18 @@ fn tag_set_track(tag: &mut taglib::Tag, ii: usize) {
 fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
 
 fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE(ii, &src));
+    tag.set_title(&TITLE_COMPOSE(ii, &src));
     tag.set_artist(&ARTIST);
     tag.set_album(&ALBUM);
 }
 
 fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE(ii, &src));
+    tag.set_title(&TITLE_COMPOSE(ii, &src));
     tag.set_artist(&ARTIST);
 }
 
 fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE(ii, &src));
+    tag.set_title(&TITLE_COMPOSE(ii, &src));
     tag.set_album(&ALBUM);
 }
 
