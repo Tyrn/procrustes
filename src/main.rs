@@ -54,8 +54,18 @@ lazy_static! {
     static ref DST_DIR: PathBuf = dst_executive();
     static ref KNOWN_EXTENSIONS: [&'static str; 9] =
         ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
+    static ref ARTIST: String = if flag("a") {
+        sval("a").to_string()
+    } else {
+        "".to_string()
+    };
+    static ref ALBUM: String = if is_album_tag() {
+        album_tag().to_string()
+    } else {
+        "".to_string()
+    };
     static ref INITIALS: String = if flag("a") {
-        initials(sval("a"))
+        initials(&ARTIST)
     } else {
         "".to_string()
     };
@@ -436,18 +446,18 @@ fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
 
 fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
     tag.set_title(&TITLE(ii, &src));
-    tag.set_artist(sval("a"));
-    tag.set_album(album_tag());
+    tag.set_artist(&ARTIST);
+    tag.set_album(&ALBUM);
 }
 
 fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
     tag.set_title(&TITLE(ii, &src));
-    tag.set_artist(sval("a"));
+    tag.set_artist(&ARTIST);
 }
 
 fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
     tag.set_title(&TITLE(ii, &src));
-    tag.set_album(album_tag());
+    tag.set_album(&ALBUM);
 }
 
 fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
