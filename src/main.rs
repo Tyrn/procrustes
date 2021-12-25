@@ -99,6 +99,16 @@ lazy_static! {
     } else {
         tag_nop_all
     };
+    static ref OUT_START: fn() = if flag("v") {
+        out_start_nop
+    } else {
+        out_start_terse
+    };
+    static ref OUT_TRACK: fn(usize, usize, u64, &str, u64, u64) = if flag("v") {
+        out_track_v
+    } else {
+        out_track_terse
+    };
 }
 
 /// Returns the destination directory, calculated according to options.
@@ -202,6 +212,51 @@ fn album_tag() -> &'static str {
     } else {
         sval("m")
     }
+}
+
+// Output callbacks.
+
+fn out_start_terse() {
+    print!("Starting ");
+    io::stdout().flush().unwrap();
+}
+
+fn out_start_nop() {}
+
+fn out_track_v(
+    ii: usize,
+    width: usize,
+    tracks_total: u64,
+    path: &str,
+    dst_bytes: u64,
+    src_bytes: u64,
+) {
+    print!(
+        "{:1$}/{2} {3} {4}",
+        ii, width, tracks_total, COLUMN_ICON, path,
+    );
+    if dst_bytes != src_bytes {
+        if dst_bytes == 0 {
+            print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
+        } else {
+            let growth = dst_bytes as i64 - src_bytes as i64;
+
+            print!("  {} {:+}", COLUMN_ICON, growth);
+        }
+    }
+    println!("");
+}
+
+fn out_track_terse(
+    _ii: usize,
+    _width: usize,
+    _tracks_total: u64,
+    _path: &str,
+    _dst_bytes: u64,
+    _src_bytes: u64,
+) {
+    print!(".");
+    io::stdout().flush().unwrap();
 }
 
 // Title tag calculation callbacks.
@@ -705,29 +760,14 @@ impl GlobalState {
             }
         }
 
-        if flag("v") {
-            print!(
-                "{:1$}/{2} {3} {4}",
-                ii,
-                self.width,
-                self.tracks_total,
-                COLUMN_ICON,
-                &dst.to_str().unwrap()
-            );
-            if dst_bytes != src_bytes {
-                if dst_bytes == 0 {
-                    print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
-                } else {
-                    let growth = dst_bytes as i64 - src_bytes as i64;
-
-                    print!("  {} {:+}", COLUMN_ICON, growth);
-                }
-            }
-            println!("");
-        } else {
-            print!(".");
-            io::stdout().flush().unwrap();
-        }
+        OUT_TRACK(
+            ii,
+            self.width,
+            self.tracks_total,
+            &dst.to_str().unwrap(),
+            dst_bytes,
+            src_bytes,
+        );
     }
 
     /// Copies all the valid tracks to their destination, according to
@@ -745,10 +785,7 @@ impl GlobalState {
             exit(1);
         }
 
-        if !flag("v") {
-            print!("Starting ");
-            io::stdout().flush().unwrap();
-        }
+        OUT_START();
 
         // Calculates file number.
         macro_rules! entry_num {
