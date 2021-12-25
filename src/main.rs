@@ -75,11 +75,11 @@ lazy_static! {
         tag_set_track
     };
     static ref TITLE_ARG: String = if flag("a") && is_album_tag() {
-        format!("{} - {}", INITIALS.as_str(), album_tag())
+        format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
     } else if flag("a") {
-        sval("a").to_string()
+        ARTIST.to_string()
     } else if is_album_tag() {
-        album_tag().to_string()
+        ALBUM.to_string()
     } else {
         "".to_string()
     };
@@ -197,6 +197,44 @@ fn album_tag() -> &'static str {
         sval("m")
     }
 }
+
+// Calculates the composition of the title tag.
+fn title(ii: usize, src: &PathBuf) -> String {
+    let stem = &src.file_stem().unwrap().to_str().unwrap();
+    if flag("F") {
+        format!("{}>{}", ii, &stem)
+    } else if flag("f") {
+        stem.to_string()
+    } else {
+        format!("{} {}", ii, TITLE_ARG.to_string())
+    }
+}
+
+// Tag setting callbacks, see global static.
+
+fn tag_set_track(tag: &mut taglib::Tag, ii: usize) {
+    tag.set_track(ii as u32);
+}
+
+fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
+
+fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    tag.set_title(&TITLE(ii, &src));
+    tag.set_artist(&ARTIST);
+    tag.set_album(&ALBUM);
+}
+
+fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    tag.set_title(&TITLE(ii, &src));
+    tag.set_artist(&ARTIST);
+}
+
+fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    tag.set_title(&TITLE(ii, &src));
+    tag.set_album(&ALBUM);
+}
+
+fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
 
 /// Sets up command line parser, and gets the command line
 /// options and arguments.
@@ -425,42 +463,6 @@ fn dir_walk(
         )
     }
 }
-
-// Calculates the composition of the title tag.
-fn title(ii: usize, src: &PathBuf) -> String {
-    let stem = &src.file_stem().unwrap().to_str().unwrap();
-    if flag("F") {
-        format!("{}>{}", ii, &stem)
-    } else if flag("f") {
-        stem.to_string()
-    } else {
-        format!("{} {}", ii, TITLE_ARG.to_string())
-    }
-}
-
-fn tag_set_track(tag: &mut taglib::Tag, ii: usize) {
-    tag.set_track(ii as u32);
-}
-
-fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
-
-fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE(ii, &src));
-    tag.set_artist(&ARTIST);
-    tag.set_album(&ALBUM);
-}
-
-fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE(ii, &src));
-    tag.set_artist(&ARTIST);
-}
-
-fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE(ii, &src));
-    tag.set_album(&ALBUM);
-}
-
-fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
 
 impl GlobalState {
     /// Checks the source validity, and its compatibility with the destination.
