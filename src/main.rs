@@ -50,14 +50,21 @@ const LINK_ICON: &str = "\u{0026a1}";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = args_retrieve();
-    static ref IS_ALBUM: bool = is_album_tag();
-    static ref ALBUM: &'static str = album_tag();
     static ref SRC: PathBuf = pval("src");
     static ref DST_DIR: PathBuf = dst_executive();
     static ref KNOWN_EXTENSIONS: [&'static str; 9] =
         ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
     static ref INITIALS: String = if flag("a") {
         initials(sval("a"))
+    } else {
+        "".to_string()
+    };
+    static ref TITLE_ARG: String = if flag("a") && is_album_tag() {
+        format!("{} - {}", INITIALS.as_str(), album_tag())
+    } else if flag("a") {
+        sval("a").to_string()
+    } else if is_album_tag() {
+        album_tag().to_string()
     } else {
         "".to_string()
     };
@@ -394,6 +401,18 @@ fn dir_walk(
     }
 }
 
+// Calculates the composition of the title tag.
+fn title(ii: usize, src: &PathBuf) -> String {
+    let stem = &src.file_stem().unwrap().to_str().unwrap();
+    if flag("F") {
+        format!("{}>{}", ii, &stem)
+    } else if flag("f") {
+        stem.to_string()
+    } else {
+        format!("{} {}", ii, TITLE_ARG.to_string())
+    }
+}
+
 impl GlobalState {
     /// Checks the source validity, and its compatibility with the destination.
     ///
@@ -491,31 +510,19 @@ impl GlobalState {
             .tag()
             .expect(format!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON,).as_str());
 
-        // Calculates the composition of the title tag.
-        let title = |s: &str| -> String {
-            let stem = &src.file_stem().unwrap().to_str().unwrap();
-            if flag("F") {
-                format!("{}>{}", ii, &stem)
-            } else if flag("f") {
-                stem.to_string()
-            } else {
-                format!("{} {}", ii, s)
-            }
-        };
-
         if !flag("d") {
             tag.set_track(ii as u32);
         }
-        if flag("a") && *IS_ALBUM {
-            tag.set_title(&title(&format!("{} - {}", INITIALS.as_str(), *ALBUM)));
+        if flag("a") && is_album_tag() {
+            tag.set_title(&title(ii, &src));
             tag.set_artist(sval("a"));
-            tag.set_album(*ALBUM);
+            tag.set_album(album_tag());
         } else if flag("a") {
-            tag.set_title(&title(sval("a")));
+            tag.set_title(&title(ii, &src));
             tag.set_artist(sval("a"));
-        } else if *IS_ALBUM {
-            tag.set_title(&title(*ALBUM));
-            tag.set_album(*ALBUM);
+        } else if is_album_tag() {
+            tag.set_title(&title(ii, &src));
+            tag.set_album(album_tag());
         }
 
         tag_file.save();
