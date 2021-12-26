@@ -18,16 +18,19 @@ impl Shrinker for String {
 
 pub struct DummySpinner {}
 
-impl Spinner for DummySpinner {
-    fn new() -> Self {
+#[allow(dead_code)]
+impl DummySpinner {
+    pub fn new() -> Self {
         Self {}
     }
+}
+
+impl Spinner for DummySpinner {
     fn message(&self, _line: String) {}
     fn stop(&mut self) {}
 }
 
 pub trait Spinner {
-    fn new() -> Self;
     fn message(&self, line: String);
     fn stop(&mut self);
     fn adieu(&self, owner: &str) -> String {
@@ -42,8 +45,9 @@ pub struct DaddySpinner {
     spinner: Option<daddy::SpinnerHandle>,
 }
 
-impl Spinner for DaddySpinner {
-    fn new() -> Self {
+#[allow(dead_code)]
+impl DaddySpinner {
+    pub fn new() -> Self {
         Self {
             spinner: Some(
                 daddy::SpinnerBuilder::new("".into())
@@ -53,7 +57,9 @@ impl Spinner for DaddySpinner {
             ),
         }
     }
+}
 
+impl Spinner for DaddySpinner {
     fn message(&self, line: String) {
         match &self.spinner {
             Some(spinner) => spinner.update(line.shrink_pretty()),
@@ -73,13 +79,16 @@ pub struct PrettySpinner {
     spinner: Option<pretty::Spinner>,
 }
 
-impl Spinner for PrettySpinner {
-    fn new() -> Self {
+#[allow(dead_code)]
+impl PrettySpinner {
+    pub fn new() -> Self {
         Self {
             spinner: Some(pretty::Spinner::new(&pretty::Spinners::Moon, "".into())),
         }
     }
+}
 
+impl Spinner for PrettySpinner {
     fn message(&self, line: String) {
         match &self.spinner {
             Some(spinner) => spinner.message(line.shrink_pretty()),
@@ -99,8 +108,9 @@ pub struct CutieSpinner {
     spinner: Option<cute::SpinnerHandle>,
 }
 
-impl Spinner for CutieSpinner {
-    fn new() -> Self {
+#[allow(dead_code)]
+impl CutieSpinner {
+    pub fn new() -> Self {
         Self {
             spinner: Some(
                 cute::SpinnerBuilder::new()
@@ -111,7 +121,9 @@ impl Spinner for CutieSpinner {
             ),
         }
     }
+}
 
+impl Spinner for CutieSpinner {
     fn message(&self, line: String) {
         match &self.spinner {
             Some(spinner) => spinner.text(line.shrink_pretty()),

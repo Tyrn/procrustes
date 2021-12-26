@@ -838,63 +838,65 @@ fn album_copy(
     OUT_DONE(tracks_total, bytes_total, now.elapsed().as_secs_f64());
 }
 
-impl GlobalState {
-    /// Returns full recursive count of audiofiles in [dir],
-    /// and the sum of their sizes.
-    ///
-    /// Sets self.suspicious_total.
-    ///
-    fn tracks_count(&mut self, dir: &Path) -> (u64, u64) {
-        if dir.is_file() {
-            if is_audiofile(dir) {
-                return (1, dir.metadata().unwrap().len());
-            }
-            return (0, 0);
+/// Returns full recursive count of audiofiles in [dir],
+/// and the sum of their sizes.
+///
+/// Sets self.suspicious_total.
+///
+fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) -> (u64, u64, u64) {
+    if dir.is_file() {
+        if is_audiofile(dir) {
+            return (0, 1, dir.metadata().unwrap().len());
         }
-
-        let mut bytes = 0;
-
-        let tracks = fs::read_dir(dir)
-            .unwrap()
-            .into_iter()
-            .filter(|r| r.is_ok())
-            .map(|r| {
-                let p = r.unwrap().path();
-                if p.is_dir() {
-                    let count = self.tracks_count(&p);
-                    bytes += count.1;
-                    count.0
-                } else {
-                    let file_name =
-                        String::from(&p.file_name().unwrap().to_str().unwrap().to_string());
-
-                    if is_audiofile(&p) {
-                        self.spinner.message(file_name);
-                        bytes += &p.metadata().unwrap().len();
-                        1
-                    } else {
-                        if is_pattern_ok(&p) && is_audiofile_ext(&p) {
-                            self.suspicious_total += 1;
-                            self.log.push(format!(" {} {}", SUSPICIOUS_ICON, file_name))
-                        }
-                        0
-                    }
-                }
-            })
-            .sum();
-
-        (tracks, bytes)
+        return (0, 0, 0);
     }
 
+    let mut bytes = 0;
+    let mut suspicious = 0;
+
+    let tracks = fs::read_dir(dir)
+        .unwrap()
+        .into_iter()
+        .filter(|r| r.is_ok())
+        .map(|r| {
+            let p = r.unwrap().path();
+            if p.is_dir() {
+                let count = tracks_count(&p, spinner, log);
+                suspicious += count.0;
+                bytes += count.2;
+                count.1
+            } else {
+                let file_name = String::from(&p.file_name().unwrap().to_str().unwrap().to_string());
+
+                if is_audiofile(&p) {
+                    spinner.message(file_name);
+                    bytes += &p.metadata().unwrap().len();
+                    1
+                } else {
+                    if is_pattern_ok(&p) && is_audiofile_ext(&p) {
+                        suspicious += 1;
+                        log.push(format!(" {} {}", SUSPICIOUS_ICON, file_name))
+                    }
+                    0
+                }
+            }
+        })
+        .sum();
+
+    (suspicious, tracks, bytes)
+}
+
+impl GlobalState {
     /// Initializes the GlobalState.
     ///
     fn tracks_state_init(&mut self, dir: &Path) {
         src_check(&mut self.log);
 
-        let count = self.tracks_count(dir);
+        let count = tracks_count(dir, &mut self.spinner, &mut self.log);
 
-        self.tracks_total = count.0;
-        self.bytes_total = count.1;
+        self.suspicious_total = count.0;
+        self.tracks_total = count.1;
+        self.bytes_total = count.2;
         self.width = format!("{}", self.tracks_total).len();
 
         self.spinner.stop();
@@ -916,7 +918,7 @@ fn main() {
                                     // let _ = *ARGS; // This magic works just as nice.
 
     let mut g = GlobalState {
-        spinner: Spinner::new(),
+        spinner: spin::DaddySpinner::new(),
         now: Instant::now(),
         suspicious_total: 0,
         width: 2,
