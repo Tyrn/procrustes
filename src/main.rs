@@ -109,6 +109,7 @@ lazy_static! {
     } else {
         out_track_terse
     };
+    static ref OUT_DONE: fn(u64, u64, f64) = out_done;
 }
 
 /// Returns the destination directory, calculated according to options.
@@ -257,6 +258,16 @@ fn out_track_terse(
 ) {
     print!(".");
     io::stdout().flush().unwrap();
+}
+
+fn out_done(tracks_total: u64, bytes_total: u64, time_elapsed: f64) {
+    println!(
+        " {} Done ({}, {}; {:.1}s).",
+        DONE_ICON,
+        tracks_total,
+        human_fine(bytes_total),
+        time_elapsed,
+    );
 }
 
 // Title tag calculation callbacks.
@@ -531,40 +542,111 @@ fn dir_walk(
     }
 }
 
-impl GlobalState {
-    /// Checks the source validity, and its compatibility with the destination.
-    ///
-    fn src_check(&mut self) {
-        let src = pval("src");
+/// Copies [src] to [dst], makes panic sensible.
+///
+fn file_copy(src: &PathBuf, dst: &PathBuf) {
+    fs::copy(&src, &dst).expect(
+        format!(
+            "{}Error while copying \"{}\" to \"{}\".{}",
+            BDELIM_ICON,
+            &src.to_str().unwrap(),
+            &dst.to_str().unwrap(),
+            BDELIM_ICON,
+        )
+        .as_str(),
+    );
+}
 
-        if !src.exists() {
-            println!(
-                " {} Source directory \"{}\" is not there.",
-                WARNING_ICON,
-                src.display()
-            );
+/// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
+/// composition.
+///
+fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
+    let tag_file = taglib::File::new(&dst).expect(
+        format!(
+            "{}Error while opening \"{}\" for tagging.{}",
+            BDELIM_ICON,
+            &dst.to_str().unwrap(),
+            BDELIM_ICON,
+        )
+        .as_str(),
+    );
+    let mut tag = tag_file
+        .tag()
+        .expect(format!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON,).as_str());
+
+    TAG_SET_TRACK(&mut tag, ii);
+    TAG_SET_ALL(&mut tag, ii, &src);
+
+    tag_file.save();
+}
+
+#[allow(dead_code)]
+/// Copies [src] to [dst], sets tags to [dst].
+///
+fn file_copy_and_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
+    file_copy(&src, &dst);
+    file_set_tags(ii, &src, &dst);
+}
+
+#[allow(dead_code)]
+/// Copies [src] to [dst], sets tags using a temporary file.
+///
+fn file_copy_and_set_tags_via_tmp(ii: usize, src: &PathBuf, dst: &PathBuf) {
+    let tmp_dir = TempDir::new().unwrap(); // Keep it!
+    let tmp = tmp_dir.path().join(format!(
+        "tmpaudio.{}",
+        &src.extension().unwrap().to_str().unwrap()
+    ));
+
+    file_copy(&src, &tmp);
+    file_set_tags(ii, &src, &tmp);
+    file_copy(&tmp, &dst);
+
+    fs::remove_file(&tmp).expect(
+        format!(
+            "{}Error while deleting \"{}\" file.{}",
+            BDELIM_ICON,
+            &tmp.to_str().unwrap(),
+            BDELIM_ICON,
+        )
+        .as_str(),
+    );
+}
+
+/// Checks the source validity, and its compatibility with the destination.
+///
+fn src_check(log: &mut Vec<String>) {
+    let src = pval("src");
+
+    if !src.exists() {
+        println!(
+            " {} Source directory \"{}\" is not there.",
+            WARNING_ICON,
+            src.display()
+        );
+        exit(1);
+    }
+    if !flag("c") && SRC.is_dir() && DST_DIR.starts_with(&*SRC) {
+        let dst_msg = format!(
+            " {} Target directory \"{}\"",
+            WARNING_ICON,
+            DST_DIR.display()
+        );
+        let src_msg = format!(" {} is inside source \"{}\"", WARNING_ICON, SRC.display());
+        if flag("y") {
+            log.push(dst_msg);
+            log.push(src_msg);
+            log.push(format!(" {} It won't run.", WARNING_ICON));
+        } else {
+            println!("{}", dst_msg);
+            println!("{}", src_msg);
+            println!(" {} No go.", WARNING_ICON);
             exit(1);
         }
-        if !flag("c") && SRC.is_dir() && DST_DIR.starts_with(&*SRC) {
-            let dst_msg = format!(
-                " {} Target directory \"{}\"",
-                WARNING_ICON,
-                DST_DIR.display()
-            );
-            let src_msg = format!(" {} is inside source \"{}\"", WARNING_ICON, SRC.display());
-            if flag("y") {
-                self.log(dst_msg);
-                self.log(src_msg);
-                self.log(format!(" {} It won't run.", WARNING_ICON));
-            } else {
-                println!("{}", dst_msg);
-                println!("{}", src_msg);
-                println!(" {} No go.", WARNING_ICON);
-                exit(1);
-            }
-        }
     }
+}
 
+impl GlobalState {
     /// Creates destination boiderplate according to options, if possible.
     ///
     fn dst_check(&self) {
@@ -609,77 +691,6 @@ impl GlobalState {
                 .as_str(),
             );
         }
-    }
-
-    /// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
-    /// composition.
-    ///
-    fn file_set_tags(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
-        let tag_file = taglib::File::new(&dst).expect(
-            format!(
-                "{}Error while opening \"{}\" for tagging.{}",
-                BDELIM_ICON,
-                &dst.to_str().unwrap(),
-                BDELIM_ICON,
-            )
-            .as_str(),
-        );
-        let mut tag = tag_file
-            .tag()
-            .expect(format!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON,).as_str());
-
-        TAG_SET_TRACK(&mut tag, ii);
-        TAG_SET_ALL(&mut tag, ii, &src);
-
-        tag_file.save();
-    }
-
-    /// Copies [src] to [dst], makes panic sensible.
-    ///
-    fn file_copy(&self, src: &PathBuf, dst: &PathBuf) {
-        fs::copy(&src, &dst).expect(
-            format!(
-                "{}Error while copying \"{}\" to \"{}\".{}",
-                BDELIM_ICON,
-                &src.to_str().unwrap(),
-                &dst.to_str().unwrap(),
-                BDELIM_ICON,
-            )
-            .as_str(),
-        );
-    }
-
-    #[allow(dead_code)]
-    /// Copies [src] to [dst], sets tags to [dst].
-    ///
-    fn file_copy_and_set_tags(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
-        self.file_copy(&src, &dst);
-        self.file_set_tags(ii, &src, &dst);
-    }
-
-    #[allow(dead_code)]
-    /// Copies [src] to [dst], sets tags using a temporary file.
-    ///
-    fn file_copy_and_set_tags_via_tmp(&mut self, ii: usize, src: &PathBuf, dst: &PathBuf) {
-        let tmp_dir = TempDir::new().unwrap(); // Keep it!
-        let tmp = tmp_dir.path().join(format!(
-            "tmpaudio.{}",
-            &src.extension().unwrap().to_str().unwrap()
-        ));
-
-        self.file_copy(&src, &tmp);
-        self.file_set_tags(ii, &src, &tmp);
-        self.file_copy(&tmp, &dst);
-
-        fs::remove_file(&tmp).expect(
-            format!(
-                "{}Error while deleting \"{}\" file.{}",
-                BDELIM_ICON,
-                &tmp.to_str().unwrap(),
-                BDELIM_ICON,
-            )
-            .as_str(),
-        );
     }
 
     /// Extracts file name from the [src] track number [ii]
@@ -755,7 +766,7 @@ impl GlobalState {
                     &dst.file_name().unwrap().to_str().unwrap()
                 ));
             } else {
-                self.file_copy_and_set_tags_via_tmp(ii, &src, &dst);
+                file_copy_and_set_tags_via_tmp(ii, &src, &dst);
                 dst_bytes = dst.metadata().unwrap().len();
             }
         }
@@ -812,12 +823,10 @@ impl GlobalState {
             );
         }
 
-        println!(
-            " {} Done ({}, {}; {:.1}s).",
-            DONE_ICON,
+        OUT_DONE(
             self.tracks_total,
-            human_fine(self.bytes_total),
-            self.now.elapsed().as_secs_f64()
+            self.bytes_total,
+            self.now.elapsed().as_secs_f64(),
         );
     }
 
@@ -871,7 +880,7 @@ impl GlobalState {
     /// Initializes the GlobalState.
     ///
     fn tracks_state_init(&mut self, dir: &Path) {
-        self.src_check();
+        src_check(&mut self.log);
 
         let count = self.tracks_count(dir);
 
