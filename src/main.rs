@@ -646,190 +646,199 @@ fn src_check(log: &mut Vec<String>) {
     }
 }
 
-impl GlobalState {
-    /// Creates destination boiderplate according to options, if possible.
-    ///
-    fn dst_check(&self) {
-        let dst = pval("dst-dir");
+/// Creates destination boiderplate according to options, if possible.
+///
+fn dst_check() {
+    let dst = pval("dst-dir");
 
-        if !dst.exists() {
-            println!(
-                " {} Destination path \"{}\" is not there.",
-                WARNING_ICON,
-                dst.display()
-            );
-            exit(1);
-        }
-        if !flag("p") && !flag("y") {
-            if DST_DIR.exists() {
-                if flag("w") {
-                    fs::remove_dir_all(&DST_DIR.as_path()).expect(
-                        format!(
-                            "{}Failed to remove destination directory \"{}\".{}",
-                            BDELIM_ICON,
-                            DST_DIR.display(),
-                            BDELIM_ICON,
-                        )
-                        .as_str(),
-                    );
-                } else {
-                    println!(
-                        " {} Destination directory \"{}\" already exists.",
-                        WARNING_ICON,
-                        DST_DIR.display()
-                    );
-                    exit(1);
-                }
-            }
-            fs::create_dir(&DST_DIR.as_path()).expect(
-                format!(
-                    "{}Destination directory \"{}\" already exists!{}",
-                    BDELIM_ICON,
-                    DST_DIR.display(),
-                    BDELIM_ICON,
-                )
-                .as_str(),
-            );
-        }
+    if !dst.exists() {
+        println!(
+            " {} Destination path \"{}\" is not there.",
+            WARNING_ICON,
+            dst.display()
+        );
+        exit(1);
     }
-
-    /// Extracts file name from the [src] track number [ii]
-    /// and makes it pretty, if necessary.
-    fn track_decorate(&self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) -> PathBuf {
-        if flag("s") && flag("t") {
-            PathBuf::from(src.file_name().unwrap())
-        } else {
-            let prefix = if flag("i") && !flag("t") {
-                if step.len() > 0 {
-                    let lines = step.iter().map(|p| p.to_str().unwrap());
-                    let chain = join(lines, "-");
-                    format!("{:01$}-[{2}]", ii, self.width, chain)
-                } else {
-                    format!("{:01$}", ii, self.width)
-                }
-            } else {
-                format!("{:01$}", ii, self.width)
-            };
-
-            if flag("u") {
-                let ext = src.extension().unwrap();
-                let name = format!(
-                    "{}-{}{}.{}",
-                    prefix,
-                    sval("u"),
-                    artist(true),
-                    ext.to_str().unwrap()
+    if !flag("p") && !flag("y") {
+        if DST_DIR.exists() {
+            if flag("w") {
+                fs::remove_dir_all(&DST_DIR.as_path()).expect(
+                    format!(
+                        "{}Failed to remove destination directory \"{}\".{}",
+                        BDELIM_ICON,
+                        DST_DIR.display(),
+                        BDELIM_ICON,
+                    )
+                    .as_str(),
                 );
-                PathBuf::from(name)
             } else {
-                let fnm = src.file_name().unwrap();
-                let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
-                PathBuf::from(name)
-            }
-        }
-    }
-
-    /// Calculates destination for the [src] track to be copied to and
-    /// makes the copy of the valid track number [ii].
-    ///
-    fn track_copy(&mut self, ii: usize, src: &PathBuf, step: &Vec<PathBuf>) {
-        let file_name = self.track_decorate(ii, src, step);
-        let depth: PathBuf = if flag("t") {
-            step.iter().collect()
-        } else {
-            PathBuf::new()
-        };
-        if flag("t") && !flag("y") {
-            let dst_dir = DST_DIR.join(&depth);
-            fs::create_dir_all(&dst_dir).expect(
-                format!(
-                    "{}Error while creating \"{}\" directory.{}",
-                    BDELIM_ICON,
-                    &dst_dir.to_str().unwrap(),
-                    BDELIM_ICON,
-                )
-                .as_str(),
-            );
-        }
-
-        let dst = DST_DIR.join(&depth).join(&file_name);
-
-        let src_bytes: u64 = src.metadata().unwrap().len();
-        let mut dst_bytes: u64 = 0;
-
-        // All the copying and tagging happens here.
-        if !flag("y") {
-            if dst.is_file() {
-                self.log(format!(
-                    " {} File \"{}\" already copied. Review your options.",
+                println!(
+                    " {} Destination directory \"{}\" already exists.",
                     WARNING_ICON,
-                    &dst.file_name().unwrap().to_str().unwrap()
-                ));
-            } else {
-                file_copy_and_set_tags_via_tmp(ii, &src, &dst);
-                dst_bytes = dst.metadata().unwrap().len();
+                    DST_DIR.display()
+                );
+                exit(1);
             }
         }
+        fs::create_dir(&DST_DIR.as_path()).expect(
+            format!(
+                "{}Destination directory \"{}\" already exists!{}",
+                BDELIM_ICON,
+                DST_DIR.display(),
+                BDELIM_ICON,
+            )
+            .as_str(),
+        );
+    }
+}
 
-        OUT_TRACK(
-            ii,
-            self.width,
-            self.tracks_total,
-            &dst.to_str().unwrap(),
-            dst_bytes,
-            src_bytes,
+/// Extracts file name from the [src] track number [ii]
+/// and makes it pretty, if necessary.
+fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+    if flag("s") && flag("t") {
+        PathBuf::from(src.file_name().unwrap())
+    } else {
+        let prefix = if flag("i") && !flag("t") {
+            if step.len() > 0 {
+                let lines = step.iter().map(|p| p.to_str().unwrap());
+                let chain = join(lines, "-");
+                format!("{:01$}-[{2}]", ii, width, chain)
+            } else {
+                format!("{:01$}", ii, width)
+            }
+        } else {
+            format!("{:01$}", ii, width)
+        };
+
+        if flag("u") {
+            let ext = src.extension().unwrap();
+            let name = format!(
+                "{}-{}{}.{}",
+                prefix,
+                sval("u"),
+                artist(true),
+                ext.to_str().unwrap()
+            );
+            PathBuf::from(name)
+        } else {
+            let fnm = src.file_name().unwrap();
+            let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
+            PathBuf::from(name)
+        }
+    }
+}
+
+/// Calculates destination for the [src] track to be copied to and
+/// makes the copy of the valid track number [ii].
+///
+fn track_copy(
+    ii: usize,
+    src: &PathBuf,
+    step: &Vec<PathBuf>,
+    width: usize,
+    tracks_total: u64,
+    log: &mut Vec<String>,
+) {
+    let file_name = track_decorate(ii, src, step, width);
+    let depth: PathBuf = if flag("t") {
+        step.iter().collect()
+    } else {
+        PathBuf::new()
+    };
+    if flag("t") && !flag("y") {
+        let dst_dir = DST_DIR.join(&depth);
+        fs::create_dir_all(&dst_dir).expect(
+            format!(
+                "{}Error while creating \"{}\" directory.{}",
+                BDELIM_ICON,
+                &dst_dir.to_str().unwrap(),
+                BDELIM_ICON,
+            )
+            .as_str(),
         );
     }
 
-    /// Copies all the valid tracks to their destination, according to
-    /// the options and GlobalState.
-    ///
-    fn album_copy(&mut self) {
-        self.dst_check();
+    let dst = DST_DIR.join(&depth).join(&file_name);
 
-        if self.tracks_total < 1 {
-            println!(
-                " {} No audio files found at \"{}\"",
+    let src_bytes: u64 = src.metadata().unwrap().len();
+    let mut dst_bytes: u64 = 0;
+
+    // All the copying and tagging happens here.
+    if !flag("y") {
+        if dst.is_file() {
+            log.push(format!(
+                " {} File \"{}\" already copied. Review your options.",
                 WARNING_ICON,
-                SRC.display()
-            );
-            exit(1);
+                &dst.file_name().unwrap().to_str().unwrap()
+            ));
+        } else {
+            file_copy_and_set_tags_via_tmp(ii, &src, &dst);
+            dst_bytes = dst.metadata().unwrap().len();
         }
+    }
 
-        OUT_START();
+    OUT_TRACK(
+        ii,
+        width,
+        tracks_total,
+        &dst.to_str().unwrap(),
+        dst_bytes,
+        src_bytes,
+    );
+}
 
-        // Calculates file number.
-        macro_rules! entry_num {
-            ($i: expr) => {
-                if flag("r") {
-                    self.tracks_total as usize - $i
-                } else {
-                    $i + 1
-                }
-            };
-        }
+/// Copies all the valid tracks to their destination, according to
+/// the options and GlobalState.
+///
+fn album_copy(
+    now: &Instant,
+    width: usize,
+    tracks_total: u64,
+    bytes_total: u64,
+    log: &mut Vec<String>,
+) {
+    dst_check();
 
-        let mut tracks_total: u64 = 0;
+    if tracks_total < 1 {
+        println!(
+            " {} No audio files found at \"{}\"",
+            WARNING_ICON,
+            SRC.display()
+        );
+        exit(1);
+    }
 
-        for (i, (src, step)) in dir_walk(&SRC, [].to_vec()).enumerate() {
-            self.track_copy(entry_num!(i), &src, &step);
-            tracks_total += 1;
-        }
+    OUT_START();
 
-        if tracks_total != self.tracks_total {
-            panic!(
-                "{}Fatal error: tracks discovered on first pass: {}; on secons pass: {}.{}",
-                BDELIM_ICON, self.tracks_total, tracks_total, BDELIM_ICON,
-            );
-        }
+    // Calculates file number.
+    macro_rules! entry_num {
+        ($i: expr) => {
+            if flag("r") {
+                tracks_total as usize - $i
+            } else {
+                $i + 1
+            }
+        };
+    }
 
-        OUT_DONE(
-            self.tracks_total,
-            self.bytes_total,
-            self.now.elapsed().as_secs_f64(),
+    let mut tracks_total_check: u64 = 0;
+
+    for (i, (src, step)) in dir_walk(&SRC, [].to_vec()).enumerate() {
+        track_copy(entry_num!(i), &src, &step, width, tracks_total, log);
+        tracks_total_check += 1;
+    }
+
+    if tracks_total_check != tracks_total {
+        panic!(
+            "{}Fatal error: tracks discovered on first pass: {}; on secons pass: {}.{}",
+            BDELIM_ICON, tracks_total, tracks_total_check, BDELIM_ICON,
         );
     }
 
+    OUT_DONE(tracks_total, bytes_total, now.elapsed().as_secs_f64());
+}
+
+impl GlobalState {
     /// Returns full recursive count of audiofiles in [dir],
     /// and the sum of their sizes.
     ///
@@ -866,7 +875,7 @@ impl GlobalState {
                     } else {
                         if is_pattern_ok(&p) && is_audiofile_ext(&p) {
                             self.suspicious_total += 1;
-                            self.log(format!(" {} {}", SUSPICIOUS_ICON, file_name))
+                            self.log.push(format!(" {} {}", SUSPICIOUS_ICON, file_name))
                         }
                         0
                     }
@@ -890,29 +899,16 @@ impl GlobalState {
 
         self.spinner.stop();
     }
-
-    #[allow(dead_code)]
-    /// Adds an [entry] to the log, without borrowing.
-    ///
-    fn logr(&mut self, entry: &str) {
-        self.log.push(entry.to_string());
-    }
-
-    /// Adds an [entry] to the log.
-    ///
-    fn log(&mut self, entry: String) {
-        self.log.push(entry);
-    }
 }
 
 struct GlobalState {
     pub spinner: spin::DaddySpinner,
     pub now: Instant,
-    pub log: Vec<String>,
-    pub width: usize, // Digits in tracks_total, e.g. 3 if tracks_total is 739.
     pub suspicious_total: u64, // The count of files with common extensions, which failed to open.
-    pub tracks_total: u64, // The count of valid tracks.
-    pub bytes_total: u64, // The sum of the sizes of the valid tracks.
+    pub width: usize,          // Digits in tracks_total, e.g. 3 if tracks_total is 739.
+    pub tracks_total: u64,     // The count of valid tracks.
+    pub bytes_total: u64,      // The sum of the sizes of the valid tracks.
+    pub log: Vec<String>,
 }
 
 fn main() {
@@ -922,11 +918,11 @@ fn main() {
     let mut g = GlobalState {
         spinner: Spinner::new(),
         now: Instant::now(),
-        log: Vec::new(),
-        width: 2,
         suspicious_total: 0,
+        width: 2,
         tracks_total: 0,
         bytes_total: 0,
+        log: Vec::new(),
     };
 
     g.tracks_state_init(&SRC.as_path());
@@ -951,7 +947,7 @@ fn main() {
 
         // GlobalState statistics reported, nothing else to be done.
     } else {
-        g.album_copy();
+        album_copy(&g.now, g.width, g.tracks_total, g.bytes_total, &mut g.log);
 
         // Second pass through the source done, all the tracks, if any, copied to destination.
     }
