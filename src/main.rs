@@ -881,7 +881,6 @@ fn main() {
 
     let mut log: Vec<String> = Vec::new();
     let src = src_check(&mut log);
-    let dst = dst_create();
 
     let now = Instant::now();
     let mut spinner = spin::DaddySpinner::new();
@@ -911,12 +910,12 @@ fn main() {
         }
         println!("; Time: {:.1}s", now.elapsed().as_secs_f64())
 
-        // GlobalState statistics reported, nothing else to be done.
+        // Statistics reported, nothing else to be done.
     } else {
         album_copy(
             &now,
             &src,
-            &dst,
+            &dst_create(),
             format!("{}", tracks_total).len(),
             tracks_total,
             bytes_total,
