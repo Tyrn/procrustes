@@ -50,8 +50,7 @@ const LINK_ICON: &str = "\u{0026a1}";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = args_retrieve();
-    static ref SRC: PathBuf = pval("src");
-    static ref DST_DIR: PathBuf = dst_executive();
+    static ref DST_DIR: PathBuf = dst_calculate();
     static ref KNOWN_EXTENSIONS: [&'static str; 9] =
         ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
     static ref ARTIST: String = if flag("a") {
@@ -114,7 +113,7 @@ lazy_static! {
 
 /// Returns the destination directory, calculated according to options.
 ///
-fn dst_executive() -> PathBuf {
+fn dst_calculate() -> PathBuf {
     let prefix = if flag("b") {
         format!("{:02}-", ival("b"))
     } else {
@@ -191,7 +190,12 @@ fn ival(name: &str) -> i64 {
 /// Defined, if flag(name) is true.
 ///
 fn pval(name: &str) -> PathBuf {
-    Path::new(sval(name)).canonicalize().unwrap()
+    Path::new(sval(name)).canonicalize().expect(&format!(
+        "{}File or directory \"{}\" does not exist.{}",
+        BDELIM_ICON,
+        sval(name),
+        BDELIM_ICON
+    ))
 }
 
 /// Returns true, if album tag is present on the command line.
@@ -616,16 +620,8 @@ fn file_copy_and_set_tags_via_tmp(ii: usize, src: &PathBuf, dst: &PathBuf) {
 /// Checks the source validity, and its compatibility with the destination.
 ///
 fn src_check(log: &mut Vec<String>) -> PathBuf {
-    let src = &*SRC;
+    let src = pval("src");
 
-    if !src.exists() {
-        println!(
-            " {} Source directory \"{}\" is not there.",
-            WARNING_ICON,
-            src.display()
-        );
-        exit(1);
-    }
     if !flag("c") && src.is_dir() && DST_DIR.starts_with(&src) {
         let dst_msg = format!(
             " {} Target directory \"{}\"",
@@ -649,17 +645,7 @@ fn src_check(log: &mut Vec<String>) -> PathBuf {
 
 /// Creates destination boiderplate according to options, if possible.
 ///
-fn dst_check() {
-    let dst = pval("dst-dir");
-
-    if !dst.exists() {
-        println!(
-            " {} Destination path \"{}\" is not there.",
-            WARNING_ICON,
-            dst.display()
-        );
-        exit(1);
-    }
+fn dst_create() -> PathBuf {
     if !flag("p") && !flag("y") {
         if DST_DIR.exists() {
             if flag("w") {
@@ -691,6 +677,7 @@ fn dst_check() {
             .as_str(),
         );
     }
+    DST_DIR.to_path_buf()
 }
 
 /// Extracts file name from the [src] track number [ii]
@@ -736,6 +723,7 @@ fn track_copy(
     ii: usize,
     src: &PathBuf,
     step: &Vec<PathBuf>,
+    dst: &PathBuf,
     width: usize,
     tracks_total: u64,
     log: &mut Vec<String>,
@@ -747,7 +735,7 @@ fn track_copy(
         PathBuf::new()
     };
     if flag("t") && !flag("y") {
-        let dst_dir = DST_DIR.join(&depth);
+        let dst_dir = dst.join(&depth);
         fs::create_dir_all(&dst_dir).expect(
             format!(
                 "{}Error while creating \"{}\" directory.{}",
@@ -759,7 +747,7 @@ fn track_copy(
         );
     }
 
-    let dst = DST_DIR.join(&depth).join(&file_name);
+    let dst = dst.join(&depth).join(&file_name);
 
     let src_bytes: u64 = src.metadata().unwrap().len();
     let mut dst_bytes: u64 = 0;
@@ -793,18 +781,18 @@ fn track_copy(
 ///
 fn album_copy(
     now: &Instant,
+    src: &PathBuf,
+    dst: &PathBuf,
     width: usize,
     tracks_total: u64,
     bytes_total: u64,
     log: &mut Vec<String>,
 ) {
-    dst_check();
-
     if tracks_total < 1 {
         println!(
             " {} No audio files found at \"{}\"",
             WARNING_ICON,
-            SRC.display()
+            src.display()
         );
         exit(1);
     }
@@ -824,8 +812,8 @@ fn album_copy(
 
     let mut tracks_total_check: u64 = 0;
 
-    for (i, (src, step)) in dir_walk(&SRC, [].to_vec()).enumerate() {
-        track_copy(entry_num!(i), &src, &step, width, tracks_total, log);
+    for (i, (src, step)) in dir_walk(src, [].to_vec()).enumerate() {
+        track_copy(entry_num!(i), &src, &step, dst, width, tracks_total, log);
         tracks_total_check += 1;
     }
 
@@ -893,6 +881,7 @@ fn main() {
 
     let mut log: Vec<String> = Vec::new();
     let src = src_check(&mut log);
+    let dst = dst_create();
 
     let now = Instant::now();
     let mut spinner = spin::DaddySpinner::new();
@@ -926,6 +915,8 @@ fn main() {
     } else {
         album_copy(
             &now,
+            &src,
+            &dst,
             format!("{}", tracks_total).len(),
             tracks_total,
             bytes_total,
