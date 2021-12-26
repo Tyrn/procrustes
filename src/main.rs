@@ -886,80 +886,59 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
     (suspicious, tracks, bytes)
 }
 
-impl GlobalState {
-    /// Initializes the GlobalState.
-    ///
-    fn tracks_state_init(&mut self, dir: &Path) {
-        src_check(&mut self.log);
-
-        let count = tracks_count(dir, &mut self.spinner, &mut self.log);
-
-        self.suspicious_total = count.0;
-        self.tracks_total = count.1;
-        self.bytes_total = count.2;
-        self.width = format!("{}", self.tracks_total).len();
-
-        self.spinner.stop();
-    }
-}
-
-struct GlobalState {
-    pub spinner: spin::DaddySpinner,
-    pub now: Instant,
-    pub suspicious_total: u64, // The count of files with common extensions, which failed to open.
-    pub width: usize,          // Digits in tracks_total, e.g. 3 if tracks_total is 739.
-    pub tracks_total: u64,     // The count of valid tracks.
-    pub bytes_total: u64,      // The sum of the sizes of the valid tracks.
-    pub log: Vec<String>,
-}
-
 fn main() {
     lazy_static::initialize(&ARGS); // Make sure arguments are handled at this point.
                                     // let _ = *ARGS; // This magic works just as nice.
 
-    let mut g = GlobalState {
-        spinner: spin::DaddySpinner::new(),
-        now: Instant::now(),
-        suspicious_total: 0,
-        width: 2,
-        tracks_total: 0,
-        bytes_total: 0,
-        log: Vec::new(),
-    };
+    let now = Instant::now();
+    let mut spinner = spin::DaddySpinner::new();
+    let mut log: Vec<String> = Vec::new();
 
-    g.tracks_state_init(&SRC.as_path());
+    src_check(&mut log);
+    let count = tracks_count(&SRC.as_path(), &mut spinner, &mut log);
+    spinner.stop();
 
-    // First pass through the source done, GlobalState ready.
+    let suspicious_total = count.0;
+    let tracks_total = count.1;
+    let bytes_total = count.2;
+
+    // First pass through the source done, statistics collected.
 
     if flag("c") {
         print!(
             " {} Valid: {} file(s); Volume: {}",
-            if g.tracks_total > 0 {
+            if tracks_total > 0 {
                 DONE_ICON
             } else {
                 WARNING_ICON
             },
-            g.tracks_total,
-            human_fine(g.bytes_total)
+            tracks_total,
+            human_fine(bytes_total)
         );
-        if g.tracks_total > 1 {
-            print!("; Average: {}", human_fine(g.bytes_total / g.tracks_total));
+        if tracks_total > 1 {
+            print!("; Average: {}", human_fine(bytes_total / tracks_total));
         }
-        println!("; Time: {:.1}s", g.now.elapsed().as_secs_f64())
+        println!("; Time: {:.1}s", now.elapsed().as_secs_f64())
 
         // GlobalState statistics reported, nothing else to be done.
     } else {
-        album_copy(&g.now, g.width, g.tracks_total, g.bytes_total, &mut g.log);
+        album_copy(
+            &now,
+            format!("{}", tracks_total).len(),
+            tracks_total,
+            bytes_total,
+            &mut log,
+        );
 
         // Second pass through the source done, all the tracks, if any, copied to destination.
     }
-    for s in g.log {
+    for s in log {
         println!("{}", s);
     }
-    if g.suspicious_total > 0 {
+    if suspicious_total > 0 {
         println!(
             " {} Suspicious, skipped: {} file(s)",
-            RSUSP_ICON, g.suspicious_total
+            RSUSP_ICON, suspicious_total
         );
     }
 
