@@ -615,8 +615,8 @@ fn file_copy_and_set_tags_via_tmp(ii: usize, src: &PathBuf, dst: &PathBuf) {
 
 /// Checks the source validity, and its compatibility with the destination.
 ///
-fn src_check(log: &mut Vec<String>) {
-    let src = pval("src");
+fn src_check(log: &mut Vec<String>) -> PathBuf {
+    let src = &*SRC;
 
     if !src.exists() {
         println!(
@@ -626,13 +626,13 @@ fn src_check(log: &mut Vec<String>) {
         );
         exit(1);
     }
-    if !flag("c") && SRC.is_dir() && DST_DIR.starts_with(&*SRC) {
+    if !flag("c") && src.is_dir() && DST_DIR.starts_with(&src) {
         let dst_msg = format!(
             " {} Target directory \"{}\"",
             WARNING_ICON,
             DST_DIR.display()
         );
-        let src_msg = format!(" {} is inside source \"{}\"", WARNING_ICON, SRC.display());
+        let src_msg = format!(" {} is inside source \"{}\"", WARNING_ICON, src.display());
         if flag("y") {
             log.push(dst_msg);
             log.push(src_msg);
@@ -644,6 +644,7 @@ fn src_check(log: &mut Vec<String>) {
             exit(1);
         }
     }
+    src.to_path_buf()
 }
 
 /// Creates destination boiderplate according to options, if possible.
@@ -890,12 +891,13 @@ fn main() {
     lazy_static::initialize(&ARGS); // Make sure arguments are handled at this point.
                                     // let _ = *ARGS; // This magic works just as nice.
 
+    let mut log: Vec<String> = Vec::new();
+    let src = src_check(&mut log);
+
     let now = Instant::now();
     let mut spinner = spin::DaddySpinner::new();
-    let mut log: Vec<String> = Vec::new();
 
-    src_check(&mut log);
-    let count = tracks_count(&SRC.as_path(), &mut spinner, &mut log);
+    let count = tracks_count(src.as_path(), &mut spinner, &mut log);
     spinner.stop();
 
     let suspicious_total = count.0;
