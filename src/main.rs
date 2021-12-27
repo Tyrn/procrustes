@@ -47,6 +47,8 @@ const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
 const COLUMN_ICON: &str = "\u{002714}";
 const LINK_ICON: &str = "\u{0026a1}";
+const START_ICON: &str = "\u{01f4a3}";
+const STOP_ICON: &str = "\u{01f4a5}";
 
 lazy_static! {
     static ref ARGS: ArgMatches<'static> = args_retrieve();
@@ -792,10 +794,14 @@ fn album_copy(
     log: &mut Vec<String>,
 ) {
     fn out_start_terse() {
-        print!("Starting ");
+        print!(" {} ", START_ICON);
         io::stdout().flush().unwrap();
     }
     fn out_start_nop() {}
+
+    fn out_tail_terse() {
+        println!(" {}", STOP_ICON);
+    }
 
     fn out_done(tracks_total: u64, bytes_total: u64, time_elapsed: f64) {
         println!(
@@ -811,6 +817,11 @@ fn album_copy(
             out_start_nop
         } else {
             out_start_terse
+        };
+        static ref OUT_TAIL: fn() = if flag("v") {
+            out_start_nop
+        } else {
+            out_tail_terse
         };
         static ref OUT_DONE: fn(u64, u64, f64) = out_done;
     }
@@ -851,6 +862,7 @@ fn album_copy(
         );
     }
 
+    OUT_TAIL();
     OUT_DONE(tracks_total, bytes_total, now.elapsed().as_secs_f64());
 }
 
