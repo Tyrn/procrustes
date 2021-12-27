@@ -53,51 +53,6 @@ lazy_static! {
     static ref DST_DIR: PathBuf = dst_calculate();
     static ref KNOWN_EXTENSIONS: [&'static str; 9] =
         ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
-    static ref ARTIST: String = if flag("a") {
-        sval("a").to_string()
-    } else {
-        "".to_string()
-    };
-    static ref ALBUM: String = if is_album_tag() {
-        album_tag().to_string()
-    } else {
-        "".to_string()
-    };
-    static ref INITIALS: String = if flag("a") {
-        initials(&ARTIST)
-    } else {
-        "".to_string()
-    };
-    static ref TAG_SET_TRACK: fn(&mut taglib::Tag, usize) = if flag("d") {
-        tag_nop_track
-    } else {
-        tag_set_track
-    };
-    static ref TITLE_TAIL: String = if flag("a") && is_album_tag() {
-        format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
-    } else if flag("a") {
-        ARTIST.to_string()
-    } else if is_album_tag() {
-        ALBUM.to_string()
-    } else {
-        "".to_string()
-    };
-    static ref TITLE_COMPOSE: fn(usize, &PathBuf) -> String = if flag("F") {
-        title_fi
-    } else if flag("f") {
-        title_f
-    } else {
-        title_i
-    };
-    static ref TAG_SET_ALL: fn(&mut taglib::Tag, usize, &PathBuf) = if flag("a") && is_album_tag() {
-        tag_set_artist_album
-    } else if flag("a") {
-        tag_set_artist
-    } else if is_album_tag() {
-        tag_set_album
-    } else {
-        tag_nop_all
-    };
 }
 
 /// Returns the destination directory, calculated according to options.
@@ -207,50 +162,6 @@ fn album_tag() -> &'static str {
         sval("m")
     }
 }
-
-// Title tag calculation callbacks.
-
-fn title_fi(ii: usize, src: &PathBuf) -> String {
-    let stem = &src.file_stem().unwrap().to_str().unwrap();
-
-    format!("{}>{}", ii, &stem)
-}
-
-fn title_f(_ii: usize, src: &PathBuf) -> String {
-    let stem = &src.file_stem().unwrap().to_str().unwrap();
-
-    stem.to_string()
-}
-
-fn title_i(ii: usize, _src: &PathBuf) -> String {
-    format!("{} {}", ii, TITLE_TAIL.to_string())
-}
-
-// Tag setting callbacks, see global static.
-
-fn tag_set_track(tag: &mut taglib::Tag, ii: usize) {
-    tag.set_track(ii as u32);
-}
-
-fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
-
-fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE_COMPOSE(ii, &src));
-    tag.set_artist(&ARTIST);
-    tag.set_album(&ALBUM);
-}
-
-fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE_COMPOSE(ii, &src));
-    tag.set_artist(&ARTIST);
-}
-
-fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
-    tag.set_title(&TITLE_COMPOSE(ii, &src));
-    tag.set_album(&ALBUM);
-}
-
-fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
 
 /// Sets up command line parser, and gets the command line
 /// options and arguments.
@@ -499,8 +410,87 @@ fn file_copy(src: &PathBuf, dst: &PathBuf) {
 /// composition.
 ///
 fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
-    lazy_static! {
+    fn title_fi(ii: usize, src: &PathBuf) -> String {
+        let stem = &src.file_stem().unwrap().to_str().unwrap();
 
+        format!("{}>{}", ii, &stem)
+    }
+    fn title_f(_ii: usize, src: &PathBuf) -> String {
+        let stem = &src.file_stem().unwrap().to_str().unwrap();
+
+        stem.to_string()
+    }
+    fn title_i(ii: usize, _src: &PathBuf) -> String {
+        format!("{} {}", ii, TITLE_TAIL.to_string())
+    }
+
+    fn tag_set_track(tag: &mut taglib::Tag, ii: usize) {
+        tag.set_track(ii as u32);
+    }
+    fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
+
+    fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+        tag.set_title(&TITLE_COMPOSE(ii, &src));
+        tag.set_artist(&ARTIST);
+        tag.set_album(&ALBUM);
+    }
+    fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+        tag.set_title(&TITLE_COMPOSE(ii, &src));
+        tag.set_artist(&ARTIST);
+    }
+    fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+        tag.set_title(&TITLE_COMPOSE(ii, &src));
+        tag.set_album(&ALBUM);
+    }
+    fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
+
+    lazy_static! {
+        static ref ARTIST: String = if flag("a") {
+            sval("a").to_string()
+        } else {
+            "".to_string()
+        };
+        static ref ALBUM: String = if is_album_tag() {
+            album_tag().to_string()
+        } else {
+            "".to_string()
+        };
+        static ref INITIALS: String = if flag("a") {
+            initials(&ARTIST)
+        } else {
+            "".to_string()
+        };
+        static ref TAG_SET_TRACK: fn(&mut taglib::Tag, usize) = if flag("d") {
+            tag_nop_track
+        } else {
+            tag_set_track
+        };
+        static ref TITLE_TAIL: String = if flag("a") && is_album_tag() {
+            format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
+        } else if flag("a") {
+            ARTIST.to_string()
+        } else if is_album_tag() {
+            ALBUM.to_string()
+        } else {
+            "".to_string()
+        };
+        static ref TITLE_COMPOSE: fn(usize, &PathBuf) -> String = if flag("F") {
+            title_fi
+        } else if flag("f") {
+            title_f
+        } else {
+            title_i
+        };
+        static ref TAG_SET_ALL: fn(&mut taglib::Tag, usize, &PathBuf) =
+            if flag("a") && is_album_tag() {
+                tag_set_artist_album
+            } else if flag("a") {
+                tag_set_artist
+            } else if is_album_tag() {
+                tag_set_album
+            } else {
+                tag_nop_all
+            };
     }
 
     let tag_file = taglib::File::new(&dst).expect(
