@@ -571,7 +571,8 @@ fn src_check(log: &mut Vec<String>) -> PathBuf {
     src.to_path_buf()
 }
 
-/// Creates destination boiderplate according to options, if possible.
+/// Creates destination directory according to options, if
+/// necessary and possible.
 ///
 fn dst_create() -> PathBuf {
     if !flag("p") && !flag("y") {
