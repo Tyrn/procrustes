@@ -98,12 +98,6 @@ lazy_static! {
     } else {
         tag_nop_all
     };
-    static ref OUT_START: fn() = if flag("v") {
-        out_start_nop
-    } else {
-        out_start_terse
-    };
-    static ref OUT_DONE: fn(u64, u64, f64) = out_done;
 }
 
 /// Returns the destination directory, calculated according to options.
@@ -212,25 +206,6 @@ fn album_tag() -> &'static str {
     } else {
         sval("m")
     }
-}
-
-// Output callbacks.
-
-fn out_start_terse() {
-    print!("Starting ");
-    io::stdout().flush().unwrap();
-}
-
-fn out_start_nop() {}
-
-fn out_done(tracks_total: u64, bytes_total: u64, time_elapsed: f64) {
-    println!(
-        " {} Done ({}, {}; {:.1}s).",
-        DONE_ICON,
-        tracks_total,
-        human_fine(bytes_total),
-        time_elapsed,
-    );
 }
 
 // Title tag calculation callbacks.
@@ -524,6 +499,10 @@ fn file_copy(src: &PathBuf, dst: &PathBuf) {
 /// composition.
 ///
 fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
+    lazy_static! {
+
+    }
+
     let tag_file = taglib::File::new(&dst).expect(
         format!(
             "{}Error while opening \"{}\" for tagging.{}",
@@ -821,6 +800,30 @@ fn album_copy(
     bytes_total: u64,
     log: &mut Vec<String>,
 ) {
+    fn out_start_terse() {
+        print!("Starting ");
+        io::stdout().flush().unwrap();
+    }
+    fn out_start_nop() {}
+
+    fn out_done(tracks_total: u64, bytes_total: u64, time_elapsed: f64) {
+        println!(
+            " {} Done ({}, {}; {:.1}s).",
+            DONE_ICON,
+            tracks_total,
+            human_fine(bytes_total),
+            time_elapsed,
+        );
+    }
+    lazy_static! {
+        static ref OUT_START: fn() = if flag("v") {
+            out_start_nop
+        } else {
+            out_start_terse
+        };
+        static ref OUT_DONE: fn(u64, u64, f64) = out_done;
+    }
+
     if tracks_total < 1 {
         println!(
             " {} No audio files found at \"{}\"",
