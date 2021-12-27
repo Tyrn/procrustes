@@ -57,7 +57,8 @@ lazy_static! {
         ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
 }
 
-/// Returns the destination directory, calculated according to options.
+/// Returns the destination directory path, calculated according to options.
+/// The destination directory is calculated, not created here.
 ///
 fn dst_calculate() -> PathBuf {
     let prefix = if flag("b") {
@@ -426,10 +427,10 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         format!("{} {}", ii, TITLE_TAIL.to_string())
     }
 
-    fn tag_set_track(tag: &mut taglib::Tag, ii: usize) {
+    fn tag_set_track_number(tag: &mut taglib::Tag, ii: usize) {
         tag.set_track(ii as u32);
     }
-    fn tag_nop_track(_tag: &mut taglib::Tag, _ii: usize) {}
+    fn tag_nop_track_number(_tag: &mut taglib::Tag, _ii: usize) {}
 
     fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
         tag.set_title(&TITLE_COMPOSE(ii, &src));
@@ -462,10 +463,10 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         } else {
             "".to_string()
         };
-        static ref TAG_SET_TRACK: fn(&mut taglib::Tag, usize) = if flag("d") {
-            tag_nop_track
+        static ref TAG_SET_TRACK_NUMBER: fn(&mut taglib::Tag, usize) = if flag("d") {
+            tag_nop_track_number
         } else {
-            tag_set_track
+            tag_set_track_number
         };
         static ref TITLE_TAIL: String = if flag("a") && is_album_tag() {
             format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
@@ -508,7 +509,7 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         .tag()
         .expect(format!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON,).as_str());
 
-    TAG_SET_TRACK(&mut tag, ii);
+    TAG_SET_TRACK_NUMBER(&mut tag, ii);
     TAG_SET_ALL(&mut tag, ii, &src);
 
     tag_file.save();
