@@ -103,27 +103,7 @@ lazy_static! {
     } else {
         out_start_terse
     };
-    static ref OUT_TRACK: fn(usize, usize, u64, &str, u64, u64) = if flag("v") {
-        out_track_v
-    } else {
-        out_track_terse
-    };
     static ref OUT_DONE: fn(u64, u64, f64) = out_done;
-    static ref STEP_COLLECT: fn(&Vec<PathBuf>) -> PathBuf = if flag("t") {
-        step_collect
-    } else {
-        step_flat_collect
-    };
-    static ref STEP_CREATE_DIR: fn(&PathBuf, &PathBuf) = if flag("t") && !flag("y") {
-        step_create_dir
-    } else {
-        step_nop_create_dir
-    };
-    static ref FILE_COPYTAG: fn(usize, &PathBuf, &PathBuf, &mut Vec<String>) -> u64 = if flag("y") {
-        file_nop_copytag
-    } else {
-        file_copytag
-    };
 }
 
 /// Returns the destination directory, calculated according to options.
@@ -242,42 +222,6 @@ fn out_start_terse() {
 }
 
 fn out_start_nop() {}
-
-fn out_track_v(
-    ii: usize,
-    width: usize,
-    tracks_total: u64,
-    path: &str,
-    dst_bytes: u64,
-    src_bytes: u64,
-) {
-    print!(
-        "{:1$}/{2} {3} {4}",
-        ii, width, tracks_total, COLUMN_ICON, path,
-    );
-    if dst_bytes != src_bytes {
-        if dst_bytes == 0 {
-            print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
-        } else {
-            let growth = dst_bytes as i64 - src_bytes as i64;
-
-            print!("  {} {:+}", COLUMN_ICON, growth);
-        }
-    }
-    println!("");
-}
-
-fn out_track_terse(
-    _ii: usize,
-    _width: usize,
-    _tracks_total: u64,
-    _path: &str,
-    _dst_bytes: u64,
-    _src_bytes: u64,
-) {
-    print!(".");
-    io::stdout().flush().unwrap();
-}
 
 fn out_done(tracks_total: u64, bytes_total: u64, time_elapsed: f64) {
     println!(
@@ -731,77 +675,137 @@ fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -
     }
 }
 
-fn step_flat_collect(_step: &Vec<PathBuf>) -> PathBuf {
-    PathBuf::new()
-}
-
-fn step_collect(step: &Vec<PathBuf>) -> PathBuf {
-    step.iter().collect()
-}
-
-fn step_nop_create_dir(_dst: &PathBuf, _step: &PathBuf) {}
-
-fn step_create_dir(dst: &PathBuf, step: &PathBuf) {
-    let dst_dir = dst.join(step);
-    fs::create_dir_all(&dst_dir).expect(
-        format!(
-            "{}Error while creating \"{}\" directory.{}",
-            BDELIM_ICON,
-            &dst_dir.to_str().unwrap(),
-            BDELIM_ICON,
-        )
-        .as_str(),
-    );
-}
-
-fn file_nop_copytag(_ii: usize, _src: &PathBuf, _dst: &PathBuf, _log: &mut Vec<String>) -> u64 {
-    0
-}
-
-fn file_copytag(ii: usize, src: &PathBuf, dst: &PathBuf, log: &mut Vec<String>) -> u64 {
-    let mut dst_bytes: u64 = 0;
-
-    if dst.is_file() {
-        log.push(format!(
-            " {} File \"{}\" already copied. Review your options.",
-            WARNING_ICON,
-            &dst.file_name().unwrap().to_str().unwrap()
-        ));
-    } else {
-        file_copy_and_set_tags_via_tmp(ii, src, dst);
-        dst_bytes = dst.metadata().unwrap().len();
-    }
-    dst_bytes
-}
-
-/// Calculates destination for the [src] track to be copied to and
-/// makes the copy of the valid track number [ii].
+/// Calculates destination, complete with the file name,
+/// for the [src_file] track to be copied to and
+/// makes the copy of the valid track (number [ii]).
 ///
 fn track_copy(
     ii: usize,
-    src: &PathBuf,
-    step: &Vec<PathBuf>,
-    dst: &PathBuf,
+    src_file: &PathBuf,
+    step: &Vec<PathBuf>, // All the subdirectories to be created below [dst].
+    dst: &PathBuf,       // Basic destination directory.
     width: usize,
     tracks_total: u64,
     log: &mut Vec<String>,
 ) {
-    let file_name = track_decorate(ii, src, step, width);
+    fn step_flat_collect(_step: &Vec<PathBuf>) -> PathBuf {
+        PathBuf::new()
+    }
+    fn step_collect(step: &Vec<PathBuf>) -> PathBuf {
+        step.iter().collect()
+    }
+
+    fn step_nop_create_dir(_dst: &PathBuf, _step: &PathBuf) {}
+
+    fn step_create_dir(dst: &PathBuf, step: &PathBuf) {
+        let dst_dir = dst.join(step);
+        fs::create_dir_all(&dst_dir).expect(
+            format!(
+                "{}Error while creating \"{}\" directory.{}",
+                BDELIM_ICON,
+                &dst_dir.to_str().unwrap(),
+                BDELIM_ICON,
+            )
+            .as_str(),
+        );
+    }
+
+    fn file_nop_copytags(
+        _ii: usize,
+        _src: &PathBuf,
+        _dst: &PathBuf,
+        _log: &mut Vec<String>,
+    ) -> u64 {
+        0
+    }
+    fn file_copytags(ii: usize, src: &PathBuf, dst: &PathBuf, log: &mut Vec<String>) -> u64 {
+        let mut dst_bytes: u64 = 0;
+
+        if dst.is_file() {
+            log.push(format!(
+                " {} File \"{}\" already copied. Review your options.",
+                WARNING_ICON,
+                &dst.file_name().unwrap().to_str().unwrap()
+            ));
+        } else {
+            file_copy_and_set_tags_via_tmp(ii, src, dst);
+            dst_bytes = dst.metadata().unwrap().len();
+        }
+        dst_bytes
+    }
+
+    fn out_track_verbose(
+        ii: usize,
+        width: usize,
+        tracks_total: u64,
+        path: &str,
+        dst_bytes: u64,
+        src_bytes: u64,
+    ) {
+        print!(
+            "{:1$}/{2} {3} {4}",
+            ii, width, tracks_total, COLUMN_ICON, path,
+        );
+        if dst_bytes != src_bytes {
+            if dst_bytes == 0 {
+                print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
+            } else {
+                let growth = dst_bytes as i64 - src_bytes as i64;
+
+                print!("  {} {:+}", COLUMN_ICON, growth);
+            }
+        }
+        println!("");
+    }
+    fn out_track_terse(
+        _ii: usize,
+        _width: usize,
+        _tracks_total: u64,
+        _path: &str,
+        _dst_bytes: u64,
+        _src_bytes: u64,
+    ) {
+        print!(".");
+        io::stdout().flush().unwrap();
+    }
+
+    lazy_static! {
+        static ref STEP_COLLECT: fn(&Vec<PathBuf>) -> PathBuf = if flag("t") {
+            step_collect
+        } else {
+            step_flat_collect
+        };
+        static ref STEP_CREATE_DIR: fn(&PathBuf, &PathBuf) = if flag("t") && !flag("y") {
+            step_create_dir
+        } else {
+            step_nop_create_dir
+        };
+        static ref FILE_COPYTAGS: fn(usize, &PathBuf, &PathBuf, &mut Vec<String>) -> u64 =
+            if flag("y") {
+                file_nop_copytags
+            } else {
+                file_copytags
+            };
+        static ref OUT_TRACK: fn(usize, usize, u64, &str, u64, u64) = if flag("v") {
+            out_track_verbose
+        } else {
+            out_track_terse
+        };
+    }
+
     let stride: PathBuf = STEP_COLLECT(step);
     STEP_CREATE_DIR(dst, &stride);
-
-    let dst = dst.join(&stride).join(&file_name);
-
-    let src_bytes: u64 = src.metadata().unwrap().len();
-    let dst_bytes: u64 = FILE_COPYTAG(ii, src, &dst, log);
+    let dst_file = dst
+        .join(&stride)
+        .join(&track_decorate(ii, src_file, step, width));
 
     OUT_TRACK(
         ii,
         width,
         tracks_total,
-        &dst.to_str().unwrap(),
-        dst_bytes,
-        src_bytes,
+        &dst_file.to_str().unwrap(),
+        FILE_COPYTAGS(ii, src_file, &dst_file, log),
+        src_file.metadata().unwrap().len(),
     );
 }
 
