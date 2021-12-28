@@ -361,14 +361,52 @@ fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     (dirs, files)
 }
 
+type WalkItem = (PathBuf, Vec<PathBuf>);
+type WalkIterator = Box<dyn Iterator<Item = WalkItem>>;
+type WalkStepDownFn = dyn Fn(PathBuf) -> WalkIterator;
+type WalkMakeItemFn = dyn Fn(PathBuf) -> WalkItem;
+
 /// Walks down the (source) [dir] tree, accumulating [step_down] on each recursion level.
 /// Item is a tuple of
 /// (audiofile, Vec<subdirectory (to be created at destination/to make it possible)>).
 ///
-fn dir_walk(
-    dir: &PathBuf,
-    step_down: Vec<PathBuf>,
-) -> Box<dyn Iterator<Item = (PathBuf, Vec<PathBuf>)>> {
+fn dir_walk(dir: &PathBuf, step_down: Vec<PathBuf>) -> WalkIterator {
+    fn stream_forward(
+        dirs: Vec<PathBuf>,
+        files: Vec<PathBuf>,
+        walk: Box<WalkStepDownFn>,
+        item: Box<WalkMakeItemFn>,
+    ) -> WalkIterator {
+        Box::new(
+            dirs.into_iter()
+                .flat_map(walk)
+                .chain(files.into_iter().map(item)),
+        )
+    }
+    fn stream_backward(
+        dirs: Vec<PathBuf>,
+        files: Vec<PathBuf>,
+        walk: Box<WalkStepDownFn>,
+        item: Box<WalkMakeItemFn>,
+    ) -> WalkIterator {
+        Box::new(
+            files
+                .into_iter()
+                .map(item)
+                .chain(dirs.into_iter().flat_map(walk)),
+        )
+    }
+    type WalkStreamFn =
+        fn(Vec<PathBuf>, Vec<PathBuf>, Box<WalkStepDownFn>, Box<WalkMakeItemFn>) -> WalkIterator;
+
+    lazy_static! {
+        static ref STREAM_FILES: WalkStreamFn = if flag("r") {
+            stream_backward
+        } else {
+            stream_forward
+        };
+    }
+
     let (dirs, files) = dir_groom(dir);
     let step = step_down.clone();
 
@@ -377,21 +415,10 @@ fn dir_walk(
         step.push(PathBuf::from(d.file_name().unwrap()));
         dir_walk(&d, step)
     };
+
     let item = move |f: PathBuf| (f, step.clone());
-    if flag("r") {
-        Box::new(
-            files
-                .into_iter()
-                .map(item)
-                .chain(dirs.into_iter().flat_map(walk)),
-        )
-    } else {
-        Box::new(
-            dirs.into_iter()
-                .flat_map(walk)
-                .chain(files.into_iter().map(item)),
-        )
-    }
+
+    STREAM_FILES(dirs, files, Box::new(walk), Box::new(item))
 }
 
 /// Copies [src] to [dst], makes panic sensible.
