@@ -1041,17 +1041,45 @@ fn str_shrink(s: &str, limit: usize) -> String {
 /// If the file type is not supplied, returns true.
 ///
 fn is_pattern_ok(path: &Path) -> bool {
-    if flag("e") {
-        let e = sval("e");
-        if e.contains("*") || e.contains("[") || e.contains("?") {
-            let pattern = glob::Pattern::new(e).unwrap();
-            pattern.matches(path.file_name().unwrap().to_str().unwrap())
+    fn is_regex() -> bool {
+        if flag("e") {
+            let e = sval("e");
+            e.contains("*") || e.contains("[") || e.contains("]") || e.contains("?")
         } else {
-            has_ext_of(path.to_str().unwrap(), e)
+            false
         }
-    } else {
+    }
+    fn always_true(_path: &Path) -> bool {
         true
     }
+    fn is_ext_matching(path: &Path) -> bool {
+        has_ext_of(path.to_str().unwrap(), &EXT)
+    }
+    fn is_pattern_matching(path: &Path) -> bool {
+        PATTERN.matches(path.file_name().unwrap().to_str().unwrap())
+    }
+
+    lazy_static! {
+        static ref EXT: String = if flag("e") {
+            sval("e").to_string()
+        } else {
+            "".to_string()
+        };
+        static ref PATTERN: glob::Pattern = if is_regex() {
+            glob::Pattern::new(sval("e")).unwrap()
+        } else {
+            glob::Pattern::new("*").unwrap()
+        };
+        static ref IS_PATTERN_OK: fn(&Path) -> bool = if is_regex() {
+            is_pattern_matching
+        } else if flag("e") {
+            is_ext_matching
+        } else {
+            always_true
+        };
+    }
+
+    IS_PATTERN_OK(path)
 }
 
 /// Returns true, if [path] has an audio file extension, otherwise false.
