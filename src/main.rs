@@ -470,15 +470,16 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         } else {
             tag_set_track_number
         };
-        static ref TAG_SET_ALL: fn(&mut taglib::Tag, usize, &PathBuf) = if *IS_ARTIST && *IS_ALBUM {
-            tag_set_artist_album
-        } else if *IS_ARTIST {
-            tag_set_artist
-        } else if *IS_ALBUM {
-            tag_set_album
-        } else {
-            tag_nop_all
-        };
+        static ref TAG_SET_THE_REST: fn(&mut taglib::Tag, usize, &PathBuf) =
+            if *IS_ARTIST && *IS_ALBUM {
+                tag_set_artist_album
+            } else if *IS_ARTIST {
+                tag_set_artist
+            } else if *IS_ALBUM {
+                tag_set_album
+            } else {
+                tag_nop_all
+            };
     }
 
     let tag_file = taglib::File::new(&dst).expect(
@@ -495,7 +496,7 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         .expect(format!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON,).as_str());
 
     TAG_SET_TRACK_NUMBER(&mut tag, ii);
-    TAG_SET_ALL(&mut tag, ii, &src);
+    TAG_SET_THE_REST(&mut tag, ii, &src);
 
     tag_file.save();
 }
@@ -925,10 +926,13 @@ fn album_copy(
     OUT_DONE(tracks_total, bytes_total, now.elapsed().as_secs_f64());
 }
 
-/// Returns full recursive count of audiofiles in [dir],
-/// and the sum of their sizes.
-///
-/// Sets self.suspicious_total.
+/// Returns the statistics of all the audiofiles in [dir] and its subdirectories
+/// in the form of a tuple:
+/// (
+/// Full count of the files with common extensions, which failed to open (suspicious),
+/// Full count of the valid audiofiles (tracks),
+/// Sum of all the sizes of the valid audiofiles (bytes)
+/// )
 ///
 fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) -> (u64, u64, u64) {
     if dir.is_file() {
