@@ -55,54 +55,32 @@ lazy_static! {
     static ref DST_DIR: PathBuf = dst_calculate();
     static ref KNOWN_EXTENSIONS: [&'static str; 9] =
         ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
-}
-
-/// Returns the destination directory path, calculated according to options.
-/// The destination directory is calculated, not created here.
-///
-fn dst_calculate() -> PathBuf {
-    let prefix = if flag("b") {
-        format!("{:02}-", ival("b"))
+    static ref IS_ARTIST: bool = flag("a");
+    static ref IS_UNIFIED: bool = flag("u");
+    static ref UNIFIED: String = if *IS_UNIFIED {
+        sval("u").to_string()
     } else {
         "".to_string()
     };
-    let base_dst = format!(
-        "{}{}",
-        prefix,
-        if flag("u") {
-            format!("{}{}", artist(false), sval("u"))
-        } else {
-            let src = pval("src");
-            if src.is_file() {
-                src.file_stem()
-            } else {
-                src.file_name()
-            }
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string()
-        }
-    );
-    if flag("p") {
-        pval("dst-dir")
+    static ref IS_ALBUM: bool = if *IS_UNIFIED && !flag("m") {
+        true
     } else {
-        [pval("dst-dir"), PathBuf::from(base_dst)].iter().collect()
-    }
-}
-
-/// Returns Artist, nicely shaped to be a part of a directory/file name.
-///
-fn artist(forw_dash: bool) -> String {
-    if flag("a") {
-        if forw_dash {
-            format!(" - {}", sval("a"))
+        flag("m")
+    };
+    static ref ARTIST: String = if *IS_ARTIST {
+        sval("a").to_string()
+    } else {
+        "".to_string()
+    };
+    static ref ALBUM: String = if *IS_ALBUM {
+        if *IS_UNIFIED && !flag("m") {
+            UNIFIED.to_string()
         } else {
-            format!("{} - ", sval("a"))
+            sval("m").to_string()
         }
     } else {
         "".to_string()
-    }
+    };
 }
 
 /// Returns true, if the [name] option is present
@@ -143,27 +121,6 @@ fn pval(name: &str) -> PathBuf {
         sval(name),
         BDELIM_ICON
     ))
-}
-
-/// Returns true, if album tag is present on the command line.
-///
-fn is_album_tag() -> bool {
-    if flag("u") && !flag("m") {
-        true
-    } else {
-        flag("m")
-    }
-}
-
-/// Returns album tag value.
-/// Defined, if is_album_tag() is true.
-///
-fn album_tag() -> &'static str {
-    if flag("u") && !flag("m") {
-        sval("u")
-    } else {
-        sval("m")
-    }
 }
 
 /// Sets up command line parser, and gets the command line
@@ -487,31 +444,16 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
     fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
 
     lazy_static! {
-        static ref ARTIST: String = if flag("a") {
-            sval("a").to_string()
-        } else {
-            "".to_string()
-        };
-        static ref ALBUM: String = if is_album_tag() {
-            album_tag().to_string()
-        } else {
-            "".to_string()
-        };
-        static ref INITIALS: String = if flag("a") {
+        static ref INITIALS: String = if *IS_ARTIST {
             initials(&ARTIST)
         } else {
             "".to_string()
         };
-        static ref TAG_SET_TRACK_NUMBER: fn(&mut taglib::Tag, usize) = if flag("d") {
-            tag_nop_track_number
-        } else {
-            tag_set_track_number
-        };
-        static ref TITLE_TAIL: String = if flag("a") && is_album_tag() {
+        static ref TITLE_TAIL: String = if *IS_ARTIST && *IS_ALBUM {
             format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
-        } else if flag("a") {
+        } else if *IS_ARTIST {
             ARTIST.to_string()
-        } else if is_album_tag() {
+        } else if *IS_ALBUM {
             ALBUM.to_string()
         } else {
             "".to_string()
@@ -523,16 +465,20 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         } else {
             title_i
         };
-        static ref TAG_SET_ALL: fn(&mut taglib::Tag, usize, &PathBuf) =
-            if flag("a") && is_album_tag() {
-                tag_set_artist_album
-            } else if flag("a") {
-                tag_set_artist
-            } else if is_album_tag() {
-                tag_set_album
-            } else {
-                tag_nop_all
-            };
+        static ref TAG_SET_TRACK_NUMBER: fn(&mut taglib::Tag, usize) = if flag("d") {
+            tag_nop_track_number
+        } else {
+            tag_set_track_number
+        };
+        static ref TAG_SET_ALL: fn(&mut taglib::Tag, usize, &PathBuf) = if *IS_ARTIST && *IS_ALBUM {
+            tag_set_artist_album
+        } else if *IS_ARTIST {
+            tag_set_artist
+        } else if *IS_ALBUM {
+            tag_set_album
+        } else {
+            tag_nop_all
+        };
     }
 
     let tag_file = taglib::File::new(&dst).expect(
@@ -613,6 +559,54 @@ fn src_check(log: &mut Vec<String>) -> PathBuf {
     src.to_path_buf()
 }
 
+/// Returns Artist, nicely shaped to be a part of a directory/file name.
+///
+fn artist_part(forw_dash: bool) -> String {
+    if *IS_ARTIST {
+        if forw_dash {
+            format!(" - {}", *ARTIST)
+        } else {
+            format!("{} - ", *ARTIST)
+        }
+    } else {
+        "".to_string()
+    }
+}
+
+/// Returns the destination directory path, calculated according to options.
+/// The destination directory is calculated, not created here.
+///
+fn dst_calculate() -> PathBuf {
+    let prefix = if flag("b") {
+        format!("{:02}-", ival("b"))
+    } else {
+        "".to_string()
+    };
+    let base_dst = format!(
+        "{}{}",
+        prefix,
+        if *IS_UNIFIED {
+            format!("{}{}", artist_part(false), *UNIFIED)
+        } else {
+            let src = pval("src");
+            if src.is_file() {
+                src.file_stem()
+            } else {
+                src.file_name()
+            }
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string()
+        }
+    );
+    if flag("p") {
+        pval("dst-dir")
+    } else {
+        [pval("dst-dir"), PathBuf::from(base_dst)].iter().collect()
+    }
+}
+
 /// Creates destination directory according to options, if
 /// necessary and possible.
 ///
@@ -651,8 +645,9 @@ fn dst_create() -> PathBuf {
     DST_DIR.to_path_buf()
 }
 
-/// Extracts file name from the [src] track number [ii]
+/// Extracts file name from the [src] track (number [ii])
 /// and makes it pretty, if necessary.
+///
 fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
     fn prefix_subdir_make(ii: usize, step: &Vec<PathBuf>, width: usize) -> String {
         if step.len() > 0 {
@@ -674,7 +669,7 @@ fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -
             "{}-{}{}.{}",
             PREFIX_MAKE(ii, step, width),
             *UNIFIED,
-            artist(true),
+            artist_part(true),
             src.extension().unwrap().to_str().unwrap()
         ))
     }
@@ -699,16 +694,11 @@ fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -
         static ref DECORATE: fn(usize, &PathBuf, &Vec<PathBuf>, usize) -> PathBuf =
             if flag("s") && flag("t") {
                 decorate_nop
-            } else if flag("u") {
+            } else if *IS_UNIFIED {
                 decorate_unified
             } else {
                 decorate
             };
-        static ref UNIFIED: String = if flag("u") {
-            sval("u").to_string()
-        } else {
-            "".to_string()
-        };
     }
 
     DECORATE(ii, src, step, width)
