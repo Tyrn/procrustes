@@ -642,37 +642,64 @@ fn dst_create() -> PathBuf {
 /// Extracts file name from the [src] track number [ii]
 /// and makes it pretty, if necessary.
 fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
-    if flag("s") && flag("t") {
-        PathBuf::from(src.file_name().unwrap())
-    } else {
-        let prefix = if flag("i") && !flag("t") {
-            if step.len() > 0 {
-                let lines = step.iter().map(|p| p.to_str().unwrap());
-                let chain = join(lines, "-");
-                format!("{:01$}-[{2}]", ii, width, chain)
-            } else {
-                format!("{:01$}", ii, width)
-            }
+    fn prefix_subdir_make(ii: usize, step: &Vec<PathBuf>, width: usize) -> String {
+        if step.len() > 0 {
+            let lines = step.iter().map(|p| p.to_str().unwrap());
+            let chain = join(lines, "-");
+            format!("{:01$}-[{2}]", ii, width, chain)
         } else {
             format!("{:01$}", ii, width)
-        };
-
-        if flag("u") {
-            let ext = src.extension().unwrap();
-            let name = format!(
-                "{}-{}{}.{}",
-                prefix,
-                sval("u"),
-                artist(true),
-                ext.to_str().unwrap()
-            );
-            PathBuf::from(name)
-        } else {
-            let fnm = src.file_name().unwrap();
-            let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
-            PathBuf::from(name)
         }
     }
+    fn prefix_make(ii: usize, _step: &Vec<PathBuf>, width: usize) -> String {
+        format!("{:01$}", ii, width)
+    }
+    fn decorate_unified(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+        let prefix = PREFIX_MAKE(ii, step, width);
+        let ext = src.extension().unwrap();
+        let name = format!(
+            "{}-{}{}.{}",
+            prefix,
+            *UNIFIED,
+            artist(true),
+            ext.to_str().unwrap()
+        );
+        PathBuf::from(name)
+    }
+    fn decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+        let prefix = PREFIX_MAKE(ii, step, width);
+        let fnm = src.file_name().unwrap();
+        let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
+
+        PathBuf::from(name)
+    }
+    fn decorate_nop(_ii: usize, src: &PathBuf, _step: &Vec<PathBuf>, _width: usize) -> PathBuf {
+        PathBuf::from(src.file_name().unwrap())
+    }
+
+    lazy_static! {
+        static ref PREFIX_MAKE: fn(usize, &Vec<PathBuf>, usize) -> String =
+            if flag("i") && !flag("t") {
+                prefix_subdir_make
+            } else {
+                prefix_make
+            };
+        static ref DECORATE: fn(usize, &PathBuf, &Vec<PathBuf>, usize) -> PathBuf =
+            if flag("s") && flag("t") {
+                decorate_nop
+            } else if flag("u") {
+                decorate_unified
+            } else {
+                decorate
+            };
+        static ref UNIFIED: String = if flag("u") {
+            sval("u").to_string()
+        } else {
+            "".to_string()
+        };
+    }
+
+    DECORATE(ii, src, step, width)
 }
 
 /// Calculates destination, complete with the file name,
