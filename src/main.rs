@@ -339,25 +339,37 @@ fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
 /// Returns sorted vectors of directories and audiofiles inside [dir].
 ///
 fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
+    fn sort_lex(dirs: &mut Vec<PathBuf>, files: &mut Vec<PathBuf>) {
+        dirs.sort_unstable();
+        files.sort_unstable();
+    }
+    fn sort_naturally(dirs: &mut Vec<PathBuf>, files: &mut Vec<PathBuf>) {
+        sort_path_slice(dirs);
+        sort_path_slice(files);
+    }
+
+    fn reverse(dirs: &mut Vec<PathBuf>, files: &mut Vec<PathBuf>) {
+        dirs.reverse();
+        files.reverse();
+    }
+    fn reverse_nop(_dirs: &mut Vec<PathBuf>, _files: &mut Vec<PathBuf>) {}
+
+    lazy_static! {
+        static ref SORT: fn(&mut Vec<PathBuf>, &mut Vec<PathBuf>) =
+            if flag("x") { sort_lex } else { sort_naturally };
+        static ref REVERSE: fn(&mut Vec<PathBuf>, &mut Vec<PathBuf>) =
+            if flag("r") { reverse } else { reverse_nop };
+    }
+
     if dir.is_file() && is_audiofile(dir) {
         return (vec![], vec![dir.to_path_buf()]);
     }
     let mut dirs = fs_entries(dir, true).unwrap();
     let mut files = fs_entries(dir, false).unwrap();
-    if flag("x") {
-        // Sort lexicographically.
-        dirs.sort_unstable();
-        files.sort_unstable();
-    } else {
-        // Sort naturally.
-        sort_path_slice(&mut dirs);
-        sort_path_slice(&mut files);
-    }
-    if flag("r") {
-        // Reverse sorting order.
-        dirs.reverse();
-        files.reverse();
-    }
+
+    SORT(&mut dirs, &mut files);
+    REVERSE(&mut dirs, &mut files);
+
     (dirs, files)
 }
 
@@ -848,11 +860,18 @@ fn album_copy(
     bytes_total: u64,
     log: &mut Vec<String>,
 ) {
+    fn track_number_inc(i: usize, _tracks_total: u64) -> usize {
+        i + 1
+    }
+    fn track_number_dec(i: usize, tracks_total: u64) -> usize {
+        tracks_total as usize - i
+    }
+
     fn out_start_terse() {
         print!(" {} ", START_ICON);
         io::stdout().flush().unwrap();
     }
-    fn out_start_nop() {}
+    fn out_nop() {}
 
     fn out_tail_terse() {
         println!(" {}", STOP_ICON);
@@ -867,17 +886,15 @@ fn album_copy(
             time_elapsed,
         );
     }
+
     lazy_static! {
-        static ref OUT_START: fn() = if flag("v") {
-            out_start_nop
+        static ref TRACK_NUMBER: fn(usize, u64) -> usize = if flag("r") {
+            track_number_dec
         } else {
-            out_start_terse
+            track_number_inc
         };
-        static ref OUT_TAIL: fn() = if flag("v") {
-            out_start_nop
-        } else {
-            out_tail_terse
-        };
+        static ref OUT_START: fn() = if flag("v") { out_nop } else { out_start_terse };
+        static ref OUT_TAIL: fn() = if flag("v") { out_nop } else { out_tail_terse };
         static ref OUT_DONE: fn(u64, u64, f64) = out_done;
     }
 
@@ -892,21 +909,18 @@ fn album_copy(
 
     OUT_START();
 
-    // Calculates file number.
-    macro_rules! entry_num {
-        ($i: expr) => {
-            if flag("r") {
-                tracks_total as usize - $i
-            } else {
-                $i + 1
-            }
-        };
-    }
-
     let mut tracks_total_check: u64 = 0;
 
     for (i, (src, step)) in dir_walk(src, [].to_vec()).enumerate() {
-        track_copy(entry_num!(i), &src, &step, dst, width, tracks_total, log);
+        track_copy(
+            TRACK_NUMBER(i, tracks_total),
+            &src,
+            &step,
+            dst,
+            width,
+            tracks_total,
+            log,
+        );
         tracks_total_check += 1;
     }
 
