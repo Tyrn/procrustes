@@ -644,9 +644,12 @@ fn dst_create() -> PathBuf {
 fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
     fn prefix_subdir_make(ii: usize, step: &Vec<PathBuf>, width: usize) -> String {
         if step.len() > 0 {
-            let lines = step.iter().map(|p| p.to_str().unwrap());
-            let chain = join(lines, "-");
-            format!("{:01$}-[{2}]", ii, width, chain)
+            format!(
+                "{:01$}-[{2}]",
+                ii,
+                width,
+                join(step.iter().map(|p| p.to_str().unwrap()), "-")
+            )
         } else {
             format!("{:01$}", ii, width)
         }
@@ -655,23 +658,20 @@ fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -
         format!("{:01$}", ii, width)
     }
     fn decorate_unified(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
-        let prefix = PREFIX_MAKE(ii, step, width);
-        let ext = src.extension().unwrap();
-        let name = format!(
+        PathBuf::from(format!(
             "{}-{}{}.{}",
-            prefix,
+            PREFIX_MAKE(ii, step, width),
             *UNIFIED,
             artist(true),
-            ext.to_str().unwrap()
-        );
-        PathBuf::from(name)
+            src.extension().unwrap().to_str().unwrap()
+        ))
     }
     fn decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
-        let prefix = PREFIX_MAKE(ii, step, width);
-        let fnm = src.file_name().unwrap();
-        let name = format!("{}-{}", prefix, fnm.to_str().unwrap());
-
-        PathBuf::from(name)
+        PathBuf::from(format!(
+            "{}-{}",
+            PREFIX_MAKE(ii, step, width),
+            src.file_name().unwrap().to_str().unwrap()
+        ))
     }
     fn decorate_nop(_ii: usize, src: &PathBuf, _step: &Vec<PathBuf>, _width: usize) -> PathBuf {
         PathBuf::from(src.file_name().unwrap())
