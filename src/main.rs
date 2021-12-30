@@ -420,7 +420,7 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         stem.to_string()
     }
     fn title_i(ii: usize, _src: &PathBuf) -> String {
-        format!("{} {}", ii, TITLE_TAIL.to_string())
+        format!("{} {}", ii, *TITLE_TAIL)
     }
 
     fn tag_set_track_number(tag: &mut taglib::Tag, ii: usize) {
@@ -1115,10 +1115,10 @@ fn is_pattern_ok(path: &Path) -> bool {
         true
     }
     fn is_ext_matching(path: &Path) -> bool {
-        has_ext_of(path.to_str().unwrap(), &EXT)
+        has_ext_of(path.to_str().unwrap(), &*EXT)
     }
     fn is_pattern_matching(path: &Path) -> bool {
-        PATTERN.matches(path.file_name().unwrap().to_str().unwrap())
+        (*PATTERN).matches(path.file_name().unwrap().to_str().unwrap())
     }
 
     lazy_static! {
