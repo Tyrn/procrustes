@@ -9,6 +9,7 @@ use alphanumeric_sort::sort_path_slice;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use glob;
 use itertools::join;
+use itertools::zip_eq;
 use regex::Regex;
 use std::{
     cmp,
@@ -842,18 +843,10 @@ fn album_copy(
     now: &Instant,
     src: &PathBuf,
     dst: &PathBuf,
-    width: usize,
     tracks_total: u64,
     bytes_total: u64,
     log: &mut Vec<String>,
 ) {
-    fn track_number_inc(i: u64, _tracks_total: u64) -> u64 {
-        i + 1
-    }
-    fn track_number_dec(i: u64, tracks_total: u64) -> u64 {
-        tracks_total - i
-    }
-
     fn out_start_terse() {
         print!(" {} ", START_ICON);
         io::stdout().flush().unwrap();
@@ -874,15 +867,22 @@ fn album_copy(
         );
     }
 
+    fn tracks_range(range: u64) -> Box<dyn Iterator<Item = u64>> {
+        Box::new(1_u64..=range)
+    }
+    fn tracks_range_rev(range: u64) -> Box<dyn Iterator<Item = u64>> {
+        Box::new((1_u64..=range).rev())
+    }
+
     lazy_static! {
-        static ref TRACK_NUMBER: fn(u64, u64) -> u64 = if flag("r") {
-            track_number_dec
-        } else {
-            track_number_inc
-        };
         static ref OUT_START: fn() = if flag("v") { out_nop } else { out_start_terse };
         static ref OUT_TAIL: fn() = if flag("v") { out_nop } else { out_tail_terse };
         static ref OUT_DONE: fn(u64, u64, f64) = out_done;
+        static ref RANGE: fn(u64) -> Box<dyn Iterator<Item = u64>> = if flag("r") {
+            tracks_range_rev
+        } else {
+            tracks_range
+        };
     }
 
     if tracks_total < 1 {
@@ -896,26 +896,10 @@ fn album_copy(
 
     OUT_START();
 
-    let mut tracks_total_check: u64 = 0;
+    let width = format!("{}", tracks_total).len();
 
-    for (i, (src, step)) in (0u64..).zip(dir_walk(src, [].to_vec())) {
-        track_copy(
-            TRACK_NUMBER(i, tracks_total),
-            &src,
-            &step,
-            dst,
-            width,
-            tracks_total,
-            log,
-        );
-        tracks_total_check += 1;
-    }
-
-    if tracks_total_check != tracks_total {
-        panic!(
-            "{}Fatal error: tracks discovered on first pass: {}; on secons pass: {}.{}",
-            BDELIM_ICON, tracks_total, tracks_total_check, BDELIM_ICON,
-        );
+    for (i, (src, step)) in zip_eq(RANGE(tracks_total), dir_walk(src, [].to_vec())) {
+        track_copy(i, &src, &step, dst, width, tracks_total, log);
     }
 
     OUT_TAIL();
@@ -1014,7 +998,6 @@ fn main() {
             &now,
             &src,
             &dst_create(),
-            format!("{}", tracks_total).len(),
             tracks_total,
             bytes_total,
             &mut log,
