@@ -42,6 +42,7 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
 // const INVALID_ICON: &str = "\u{00274c}";
 const WARNING_ICON: &str = "\u{01f4a7}";
 const BDELIM_ICON: &str = "\u{01f539}";
+const ODELIM_ICON: &str = "\u{01f538}";
 const RSUSP_ICON: &str = "\u{002753}";
 const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
@@ -408,40 +409,40 @@ fn file_copy(src: &PathBuf, dst: &PathBuf) {
 /// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
 /// composition.
 ///
-fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
-    fn title_fi(ii: usize, src: &PathBuf) -> String {
+fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
+    fn title_fi(ii: u64, src: &PathBuf) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
         format!("{}>{}", ii, &stem)
     }
-    fn title_f(_ii: usize, src: &PathBuf) -> String {
+    fn title_f(_ii: u64, src: &PathBuf) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
         stem.to_string()
     }
-    fn title_i(ii: usize, _src: &PathBuf) -> String {
+    fn title_i(ii: u64, _src: &PathBuf) -> String {
         format!("{} {}", ii, *TITLE_TAIL)
     }
 
-    fn tag_set_track_number(tag: &mut taglib::Tag, ii: usize) {
+    fn tag_set_track_number(tag: &mut taglib::Tag, ii: u64) {
         tag.set_track(ii as u32);
     }
-    fn tag_nop_track_number(_tag: &mut taglib::Tag, _ii: usize) {}
+    fn tag_nop_track_number(_tag: &mut taglib::Tag, _ii: u64) {}
 
-    fn tag_set_artist_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    fn tag_set_artist_album(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
         tag.set_title(&TITLE_COMPOSE(ii, &src));
         tag.set_artist(&ARTIST);
         tag.set_album(&ALBUM);
     }
-    fn tag_set_artist(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    fn tag_set_artist(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
         tag.set_title(&TITLE_COMPOSE(ii, &src));
         tag.set_artist(&ARTIST);
     }
-    fn tag_set_album(tag: &mut taglib::Tag, ii: usize, src: &PathBuf) {
+    fn tag_set_album(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
         tag.set_title(&TITLE_COMPOSE(ii, &src));
         tag.set_album(&ALBUM);
     }
-    fn tag_nop_all(_tag: &mut taglib::Tag, _ii: usize, _src: &PathBuf) {}
+    fn tag_nop_all(_tag: &mut taglib::Tag, _ii: u64, _src: &PathBuf) {}
 
     lazy_static! {
         static ref INITIALS: String = if *IS_ARTIST {
@@ -458,19 +459,19 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
         } else {
             "".to_string()
         };
-        static ref TITLE_COMPOSE: fn(usize, &PathBuf) -> String = if flag("F") {
+        static ref TITLE_COMPOSE: fn(u64, &PathBuf) -> String = if flag("F") {
             title_fi
         } else if flag("f") {
             title_f
         } else {
             title_i
         };
-        static ref TAG_SET_TRACK_NUMBER: fn(&mut taglib::Tag, usize) = if flag("d") {
+        static ref TAG_SET_TRACK_NUMBER: fn(&mut taglib::Tag, u64) = if flag("d") {
             tag_nop_track_number
         } else {
             tag_set_track_number
         };
-        static ref TAG_SET_THE_REST: fn(&mut taglib::Tag, usize, &PathBuf) =
+        static ref TAG_SET_THE_REST: fn(&mut taglib::Tag, u64, &PathBuf) =
             if *IS_ARTIST && *IS_ALBUM {
                 tag_set_artist_album
             } else if *IS_ARTIST {
@@ -504,7 +505,7 @@ fn file_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
 #[allow(dead_code)]
 /// Copies [src] to [dst], sets tags to [dst].
 ///
-fn file_copy_and_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
+fn file_copy_and_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
     file_copy(&src, &dst);
     file_set_tags(ii, &src, &dst);
 }
@@ -512,7 +513,7 @@ fn file_copy_and_set_tags(ii: usize, src: &PathBuf, dst: &PathBuf) {
 #[allow(dead_code)]
 /// Copies [src] to [dst], sets tags using a temporary file.
 ///
-fn file_copy_and_set_tags_via_tmp(ii: usize, src: &PathBuf, dst: &PathBuf) {
+fn file_copy_and_set_tags_via_tmp(ii: u64, src: &PathBuf, dst: &PathBuf) {
     let tmp_dir = TempDir::new().unwrap(); // Keep it!
     let tmp = tmp_dir.path().join(format!(
         "tmpaudio.{}",
@@ -649,23 +650,23 @@ fn dst_create() -> PathBuf {
 /// Extracts file name from the [src] track (number [ii])
 /// and makes it pretty, if necessary.
 ///
-fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
-    fn prefix_subdir_make(ii: usize, step: &Vec<PathBuf>, width: usize) -> String {
+fn track_decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+    fn prefix_subdir_make(ii: u64, step: &Vec<PathBuf>, width: usize) -> String {
         if step.len() > 0 {
             format!(
                 "{:01$}-[{2}]",
                 ii,
                 width,
-                join(step.iter().map(|p| p.to_str().unwrap()), "-")
+                join(step.iter().map(|p| p.to_str().unwrap()), ODELIM_ICON)
             )
         } else {
             format!("{:01$}", ii, width)
         }
     }
-    fn prefix_make(ii: usize, _step: &Vec<PathBuf>, width: usize) -> String {
+    fn prefix_make(ii: u64, _step: &Vec<PathBuf>, width: usize) -> String {
         format!("{:01$}", ii, width)
     }
-    fn decorate_unified(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+    fn decorate_unified(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
         PathBuf::from(format!(
             "{}-{}{}.{}",
             PREFIX_MAKE(ii, step, width),
@@ -674,25 +675,25 @@ fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -
             src.extension().unwrap().to_str().unwrap()
         ))
     }
-    fn decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+    fn decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
         PathBuf::from(format!(
             "{}-{}",
             PREFIX_MAKE(ii, step, width),
             src.file_name().unwrap().to_str().unwrap()
         ))
     }
-    fn decorate_nop(_ii: usize, src: &PathBuf, _step: &Vec<PathBuf>, _width: usize) -> PathBuf {
+    fn decorate_nop(_ii: u64, src: &PathBuf, _step: &Vec<PathBuf>, _width: usize) -> PathBuf {
         PathBuf::from(src.file_name().unwrap())
     }
 
     lazy_static! {
-        static ref PREFIX_MAKE: fn(usize, &Vec<PathBuf>, usize) -> String =
-            if flag("i") && !flag("t") {
-                prefix_subdir_make
-            } else {
-                prefix_make
-            };
-        static ref DECORATE: fn(usize, &PathBuf, &Vec<PathBuf>, usize) -> PathBuf =
+        static ref PREFIX_MAKE: fn(u64, &Vec<PathBuf>, usize) -> String = if flag("i") && !flag("t")
+        {
+            prefix_subdir_make
+        } else {
+            prefix_make
+        };
+        static ref DECORATE: fn(u64, &PathBuf, &Vec<PathBuf>, usize) -> PathBuf =
             if flag("s") && flag("t") {
                 decorate_nop
             } else if *IS_UNIFIED {
@@ -710,7 +711,7 @@ fn track_decorate(ii: usize, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -
 /// makes the copy of the valid track (number [ii]).
 ///
 fn track_copy(
-    ii: usize,
+    ii: u64,
     src_file: &PathBuf,
     step: &Vec<PathBuf>, // All the subdirectories to be created below [dst].
     dst: &PathBuf,       // Basic destination directory.
@@ -740,15 +741,10 @@ fn track_copy(
         );
     }
 
-    fn file_nop_copytags(
-        _ii: usize,
-        _src: &PathBuf,
-        _dst: &PathBuf,
-        _log: &mut Vec<String>,
-    ) -> u64 {
+    fn file_nop_copytags(_ii: u64, _src: &PathBuf, _dst: &PathBuf, _log: &mut Vec<String>) -> u64 {
         0
     }
-    fn file_copytags(ii: usize, src: &PathBuf, dst: &PathBuf, log: &mut Vec<String>) -> u64 {
+    fn file_copytags(ii: u64, src: &PathBuf, dst: &PathBuf, log: &mut Vec<String>) -> u64 {
         let mut dst_bytes: u64 = 0;
 
         if dst.is_file() {
@@ -765,7 +761,7 @@ fn track_copy(
     }
 
     fn out_track_verbose(
-        ii: usize,
+        ii: u64,
         width: usize,
         tracks_total: u64,
         path: &str,
@@ -788,7 +784,7 @@ fn track_copy(
         println!("");
     }
     fn out_track_terse(
-        _ii: usize,
+        _ii: u64,
         _width: usize,
         _tracks_total: u64,
         _path: &str,
@@ -810,13 +806,13 @@ fn track_copy(
         } else {
             step_nop_create_dir
         };
-        static ref FILE_COPYTAGS: fn(usize, &PathBuf, &PathBuf, &mut Vec<String>) -> u64 =
+        static ref FILE_COPYTAGS: fn(u64, &PathBuf, &PathBuf, &mut Vec<String>) -> u64 =
             if flag("y") {
                 file_nop_copytags
             } else {
                 file_copytags
             };
-        static ref OUT_TRACK: fn(usize, usize, u64, &str, u64, u64) = if flag("v") {
+        static ref OUT_TRACK: fn(u64, usize, u64, &str, u64, u64) = if flag("v") {
             out_track_verbose
         } else {
             out_track_terse
@@ -851,11 +847,11 @@ fn album_copy(
     bytes_total: u64,
     log: &mut Vec<String>,
 ) {
-    fn track_number_inc(i: usize, _tracks_total: u64) -> usize {
+    fn track_number_inc(i: u64, _tracks_total: u64) -> u64 {
         i + 1
     }
-    fn track_number_dec(i: usize, tracks_total: u64) -> usize {
-        tracks_total as usize - i
+    fn track_number_dec(i: u64, tracks_total: u64) -> u64 {
+        tracks_total - i
     }
 
     fn out_start_terse() {
@@ -879,7 +875,7 @@ fn album_copy(
     }
 
     lazy_static! {
-        static ref TRACK_NUMBER: fn(usize, u64) -> usize = if flag("r") {
+        static ref TRACK_NUMBER: fn(u64, u64) -> u64 = if flag("r") {
             track_number_dec
         } else {
             track_number_inc
@@ -902,7 +898,7 @@ fn album_copy(
 
     let mut tracks_total_check: u64 = 0;
 
-    for (i, (src, step)) in dir_walk(src, [].to_vec()).enumerate() {
+    for (i, (src, step)) in (0u64..).zip(dir_walk(src, [].to_vec())) {
         track_copy(
             TRACK_NUMBER(i, tracks_total),
             &src,
