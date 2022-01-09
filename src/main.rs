@@ -915,6 +915,17 @@ fn album_copy(
 /// )
 ///
 fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) -> (u64, u64, u64) {
+    fn log_name_v(p: &PathBuf) -> String {
+        String::from(p.file_name().unwrap().to_str().unwrap().to_string())
+    }
+    fn log_name(p: &PathBuf) -> String {
+        String::from(p.file_name().unwrap().to_str().unwrap().to_string())
+    }
+
+    lazy_static! {
+        static ref LOG_NAME: fn(&PathBuf) -> String = if flag("v") { log_name_v } else { log_name };
+    }
+
     if dir.is_file() {
         if is_audiofile(dir) {
             return (0, 1, dir.metadata().unwrap().len());
@@ -937,16 +948,14 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
                 bytes += count.2;
                 count.1
             } else {
-                let file_name = String::from(&p.file_name().unwrap().to_str().unwrap().to_string());
-
                 if is_audiofile(&p) {
-                    spinner.message(file_name);
+                    spinner.message(log_name(&p));
                     bytes += &p.metadata().unwrap().len();
                     1
                 } else {
                     if is_pattern_ok(&p) && is_audiofile_ext(&p) {
                         suspicious += 1;
-                        log.push(format!(" {} {}", SUSPICIOUS_ICON, file_name))
+                        log.push(format!(" {} {}", SUSPICIOUS_ICON, LOG_NAME(&p)))
                     }
                     0
                 }
@@ -1004,6 +1013,9 @@ fn main() {
         );
 
         // Second pass through the source done, all the tracks, if any, copied to destination.
+    }
+    if flag("v") {
+        log.sort_unstable();
     }
     for s in log {
         println!("{}", s);
