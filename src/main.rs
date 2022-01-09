@@ -41,7 +41,7 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     \n\n<src> as a single file: \
     \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg .";
 
-// const INVALID_ICON: &str = "\u{00274c}";
+const INVALID_ICON: &str = "\u{00274c}";
 const WARNING_ICON: &str = "\u{01f4a7}";
 const BDELIM_ICON: &str = "\u{01f539}";
 const ODELIM_ICON: &str = "\u{01f538}";
@@ -916,18 +916,20 @@ fn album_copy(
 ///
 fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) -> (u64, u64, u64) {
     fn log_name_v(p: &Path) -> String {
-        // let stamp: DateTime<Utc> = p.metadata().unwrap().created().unwrap().into();
-        let stamp: DateTime<Utc> = match p.metadata().unwrap().created() {
-            Ok(date) => date.into(),
+        let (icon, stamp) = match p.metadata().unwrap().created() {
+            Ok(date) => (BDELIM_ICON, DateTime::<Utc>::from(date)),
             Err(_) => match p.metadata().unwrap().modified() {
-                Ok(date) => date.into(),
-                Err(_) => panic!("Wrong Time Stamp"),
-            }
+                Ok(date) => (ODELIM_ICON, DateTime::<Utc>::from(date)),
+                Err(_) => (
+                    INVALID_ICON,
+                    DateTime::<Utc>::from(std::time::SystemTime::now()),
+                ),
+            },
         };
         format!(
             "{}{} {}",
             &stamp.date().to_string()[..10],
-            BDELIM_ICON,
+            icon,
             p.strip_prefix(env::current_dir().unwrap())
                 .unwrap()
                 .to_str()
