@@ -6,7 +6,7 @@ use crate::spinner as spin;
 use crate::spinner::Spinner;
 
 use alphanumeric_sort::sort_path_slice;
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, Arg, ArgMatches};
 use glob;
 use itertools::join;
 use itertools::zip_eq;
@@ -53,7 +53,7 @@ const START_ICON: &str = "\u{01f4a3}";
 const STOP_ICON: &str = "\u{01f4a5}";
 
 lazy_static! {
-    static ref ARGS: ArgMatches<'static> = args_retrieve();
+    static ref ARGS: ArgMatches = args_retrieve();
     static ref DST_DIR: PathBuf = dst_calculate();
     static ref KNOWN_EXTENSIONS: [&'static str; 9] =
         ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
@@ -128,138 +128,137 @@ fn pval(name: &str) -> PathBuf {
 /// Sets up command line parser, and gets the command line
 /// options and arguments.
 ///
-fn args_retrieve() -> ArgMatches<'static> {
+fn args_retrieve() -> ArgMatches {
     App::new("procrustes")
-        .setting(AppSettings::ColoredHelp)
         .version("v1.0.3")
         .author("")
         .about(APP_DESCRIPTION)
         .arg(
-            Arg::with_name("v")
-                .short("v")
+            Arg::new("v")
+                .short('v')
                 .long("verbose")
                 .help("Verbose output"),
         )
         .arg(
-            Arg::with_name("d")
-                .short("d")
+            Arg::new("d")
+                .short('d')
                 .long("drop-tracknumber")
                 .help("Do not set track numbers"),
         )
         .arg(
-            Arg::with_name("s")
-                .short("s")
+            Arg::new("s")
+                .short('s')
                 .long("strip-decorations")
                 .help("Strip file and directory name decorations"),
         )
         .arg(
-            Arg::with_name("f")
-                .short("f")
+            Arg::new("f")
+                .short('f')
                 .long("file-title")
                 .help("Use file name for title tag"),
         )
         .arg(
-            Arg::with_name("F")
-                .short("F")
+            Arg::new("F")
+                .short('F')
                 .long("file-title-num")
                 .help("Use numbered file name for title tag"),
         )
         .arg(
-            Arg::with_name("x")
-                .short("x")
+            Arg::new("x")
+                .short('x')
                 .long("sort-lex")
                 .help("Sort files lexicographically"),
         )
         .arg(
-            Arg::with_name("t")
-                .short("t")
+            Arg::new("t")
+                .short('t')
                 .long("tree-dst")
                 .help("Retain the tree structure of the source album at destination"),
         )
         .arg(
-            Arg::with_name("p")
-                .short("p")
+            Arg::new("p")
+                .short('p')
                 .long("drop-dst")
                 .help("Do not create destination directory"),
         )
         .arg(
-            Arg::with_name("r")
-                .short("r")
+            Arg::new("r")
+                .short('r')
                 .long("reverse")
                 .help("Copy files in reverse order (number one file is the last to be copied)"),
         )
         .arg(
-            Arg::with_name("i")
-                .short("i")
+            Arg::new("i")
+                .short('i')
                 .long("prepend-subdir-name")
                 .help("Prepend current subdirectory name to a file name"),
         )
         .arg(
-            Arg::with_name("c")
-                .short("c")
+            Arg::new("c")
+                .short('c')
                 .long("count")
                 .help("Just count the files"),
         )
         .arg(
-            Arg::with_name("w")
-                .short("w")
+            Arg::new("w")
+                .short('w')
                 .long("overwrite")
                 .help("Silently remove existing destination directory (not recommended)"),
         )
         .arg(
-            Arg::with_name("y")
-                .short("y")
+            Arg::new("y")
+                .short('y')
                 .long("dry-run")
                 .help("Without actually copying the files (trumps -w, too)"),
         )
         .arg(
-            Arg::with_name("e")
-                .short("e")
+            Arg::new("e")
+                .short('e')
                 .long("file-type")
                 .value_name("EXT")
                 .help("Accept only audio files of the specified type (e.g. -e ogg, or even -e '*kb.mp3')")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("u")
-                .short("u")
+            Arg::new("u")
+                .short('u')
                 .long("unified-name")
                 .value_name("UNIFIED_NAME")
                 .help("UNIFIED_NAME for everything unspecified")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("b")
-                .short("b")
+            Arg::new("b")
+                .short('b')
                 .long("album-num")
                 .value_name("ALBUM_NUM")
                 .help("0..99; prepend ALBUM_NUM to the destination root directory name")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("a")
-                .short("a")
+            Arg::new("a")
+                .short('a')
                 .long("artist")
                 .value_name("ARTIST")
                 .help("Artist tag")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("m")
-                .short("m")
+            Arg::new("m")
+                .short('m')
                 .long("album")
                 .value_name("ALBUM")
                 .help("Album tag")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("src")
+            Arg::new("src")
                 .help("Source file or directory")
                 .required(true)
                 .index(1),
         )
         .arg(
-            Arg::with_name("dst-dir")
+            Arg::new("dst-dir")
                 .help("Destination directory")
                 .required(true)
                 .index(2),
@@ -929,6 +928,8 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
     if dir.is_file() {
         if is_audiofile(dir) {
             return (0, 1, dir.metadata().unwrap().len());
+        } else if is_pattern_ok(&dir) && is_audiofile_ext(&dir) {
+            return (1, 0, 0);
         }
         return (0, 0, 0);
     }
