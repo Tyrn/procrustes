@@ -994,14 +994,12 @@ fn main() {
     let now = Instant::now();
     let mut spinner = spin::DaddySpinner::new();
 
-    let count = tracks_count(src.as_path(), &mut spinner, &mut log);
+    let (suspicious_total, tracks_total, bytes_total) =
+        tracks_count(src.as_path(), &mut spinner, &mut log);
+
     spinner.stop();
     log.sort_unstable(); // Suspicious files only, sorting them by date.
     log.append(&mut src_check_log);
-
-    let suspicious_total = count.0;
-    let tracks_total = count.1;
-    let bytes_total = count.2;
 
     // First pass through the source done, statistics collected.
 
