@@ -6,13 +6,14 @@ use crate::spinner as spin;
 use crate::spinner::Spinner;
 
 use alphanumeric_sort::sort_path_slice;
+use chrono::{DateTime, Utc};
 use clap::{App, Arg, ArgMatches};
 use glob;
 use itertools::join;
 use itertools::zip_eq;
 use regex::Regex;
 use std::{
-    cmp,
+    cmp, env,
     ffi::OsStr,
     fs, io,
     io::Write,
@@ -914,21 +915,31 @@ fn album_copy(
 /// )
 ///
 fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) -> (u64, u64, u64) {
-    fn log_name_v(p: &PathBuf) -> String {
-        String::from(p.file_name().unwrap().to_str().unwrap().to_string())
+    fn log_name_v(p: &Path) -> String {
+        let stamp: DateTime<Utc> = p.metadata().unwrap().created().unwrap().into();
+        format!(
+            "{} {} {}",
+            &stamp.date().to_string()[..10],
+            COLUMN_ICON,
+            p.strip_prefix(env::current_dir().unwrap())
+                .unwrap()
+                .to_str()
+                .unwrap()
+        )
     }
-    fn log_name(p: &PathBuf) -> String {
+    fn log_name(p: &Path) -> String {
         String::from(p.file_name().unwrap().to_str().unwrap().to_string())
     }
 
     lazy_static! {
-        static ref LOG_NAME: fn(&PathBuf) -> String = if flag("v") { log_name_v } else { log_name };
+        static ref LOG_NAME: fn(&Path) -> String = if flag("v") { log_name_v } else { log_name };
     }
 
     if dir.is_file() {
         if is_audiofile(dir) {
             return (0, 1, dir.metadata().unwrap().len());
         } else if is_pattern_ok(&dir) && is_audiofile_ext(&dir) {
+            log.push(format!(" {} {}", SUSPICIOUS_ICON, LOG_NAME(&dir)));
             return (1, 0, 0);
         }
         return (0, 0, 0);
