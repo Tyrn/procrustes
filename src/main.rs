@@ -940,15 +940,11 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
         String::from(p.file_name().unwrap().to_str().unwrap().to_string())
     }
 
-    lazy_static! {
-        static ref LOG_NAME: fn(&Path) -> String = if flag("v") { log_name_v } else { log_name };
-    }
-
     if dir.is_file() {
         if is_audiofile(dir) {
             return (0, 1, dir.metadata().unwrap().len());
         } else if is_pattern_ok(&dir) && is_audiofile_ext(&dir) {
-            log.push(format!(" {} {}", SUSPICIOUS_ICON, LOG_NAME(&dir)));
+            log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(&dir)));
             return (1, 0, 0);
         }
         return (0, 0, 0);
@@ -976,7 +972,7 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
                 } else {
                     if is_pattern_ok(&p) && is_audiofile_ext(&p) {
                         suspicious += 1;
-                        log.push(format!(" {} {}", SUSPICIOUS_ICON, LOG_NAME(&p)))
+                        log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(&p)))
                     }
                     0
                 }
@@ -1035,9 +1031,9 @@ fn main() {
 
         // Second pass through the source done, all the tracks, if any, copied to destination.
     }
-    if flag("v") {
-        log.sort_unstable();
-    }
+
+    log.sort_unstable();
+
     for s in log {
         println!("{}", s);
     }
