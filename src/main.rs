@@ -538,8 +538,9 @@ fn file_copy_and_set_tags_via_tmp(ii: u64, src: &PathBuf, dst: &PathBuf) {
 
 /// Checks the source validity, and its compatibility with the destination.
 ///
-fn src_check(log: &mut Vec<String>) -> PathBuf {
+fn src_check() -> (Vec<String>, PathBuf) {
     let src = pval("src");
+    let mut log = Vec::<String>::new();
 
     if !flag("c") && src.is_dir() && DST_DIR.starts_with(&src) {
         let dst_msg = format!(
@@ -559,7 +560,7 @@ fn src_check(log: &mut Vec<String>) -> PathBuf {
             exit(1);
         }
     }
-    src.to_path_buf()
+    (log, src.to_path_buf())
 }
 
 /// Returns Artist, nicely shaped to be a part of a directory/file name.
@@ -988,13 +989,15 @@ fn main() {
                                     // let _ = *ARGS; // This magic works just as nice.
 
     let mut log: Vec<String> = Vec::new();
-    let src = src_check(&mut log);
+    let (mut src_check_log, src) = src_check();
 
     let now = Instant::now();
     let mut spinner = spin::DaddySpinner::new();
 
     let count = tracks_count(src.as_path(), &mut spinner, &mut log);
     spinner.stop();
+    log.sort_unstable(); // Suspicious files only, sorting them by date.
+    log.append(&mut src_check_log);
 
     let suspicious_total = count.0;
     let tracks_total = count.1;
@@ -1031,9 +1034,6 @@ fn main() {
 
         // Second pass through the source done, all the tracks, if any, copied to destination.
     }
-
-    log.sort_unstable();
-
     for s in log {
         println!("{}", s);
     }
