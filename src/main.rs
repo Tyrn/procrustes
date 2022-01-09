@@ -916,11 +916,18 @@ fn album_copy(
 ///
 fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) -> (u64, u64, u64) {
     fn log_name_v(p: &Path) -> String {
-        let stamp: DateTime<Utc> = p.metadata().unwrap().created().unwrap().into();
+        // let stamp: DateTime<Utc> = p.metadata().unwrap().created().unwrap().into();
+        let stamp: DateTime<Utc> = match p.metadata().unwrap().created() {
+            Ok(date) => date.into(),
+            Err(_) => match p.metadata().unwrap().modified() {
+                Ok(date) => date.into(),
+                Err(_) => panic!("Wrong Time Stamp"),
+            }
+        };
         format!(
-            "{} {} {}",
+            "{}{} {}",
             &stamp.date().to_string()[..10],
-            COLUMN_ICON,
+            BDELIM_ICON,
             p.strip_prefix(env::current_dir().unwrap())
                 .unwrap()
                 .to_str()
