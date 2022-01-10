@@ -915,7 +915,11 @@ fn album_copy(
 /// Sum of all the sizes of the valid audiofiles (bytes)
 /// )
 ///
-fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) -> (u64, u64, u64) {
+fn tracks_count(
+    dir: &Path,
+    spinner: &mut dyn Spinner,
+    log: &mut Vec<String>,
+) -> (u64, u64, u64, u64) {
     fn log_name_v(p: &Path) -> String {
         let (icon, stamp) = match p.metadata().unwrap().created() {
             Ok(date) => (BDELIM_ICON, DateTime::<Utc>::from(date)),
@@ -928,13 +932,15 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
             },
         };
         format!(
-            "{}{} {}",
+            "{}{} {}  {} {}",
             &stamp.date().to_string()[..10],
             icon,
             p.strip_prefix(env::current_dir().unwrap())
                 .unwrap()
                 .to_str()
-                .unwrap()
+                .unwrap(),
+            COLUMN_ICON,
+            human_fine(p.metadata().unwrap().len()),
         )
     }
     fn log_name(p: &Path) -> String {
@@ -943,16 +949,17 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
 
     if dir.is_file() {
         if is_audiofile(dir) {
-            return (0, 1, dir.metadata().unwrap().len());
+            return (0, 0, 1, dir.metadata().unwrap().len());
         } else if is_pattern_ok(&dir) && is_audiofile_ext(&dir) {
             log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(&dir)));
-            return (1, 0, 0);
+            return (1, dir.metadata().unwrap().len(), 0, 0);
         }
-        return (0, 0, 0);
+        return (0, 0, 0, 0);
     }
 
     let mut bytes = 0;
     let mut suspicious = 0;
+    let mut suspicious_bytes = 0;
 
     let tracks = fs::read_dir(dir)
         .unwrap()
@@ -961,18 +968,20 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
         .map(|r| {
             let p = r.unwrap().path();
             if p.is_dir() {
-                let count = tracks_count(&p, spinner, log);
-                suspicious += count.0;
-                bytes += count.2;
-                count.1
+                let (sc, sb, tc, tb) = tracks_count(&p, spinner, log);
+                suspicious += sc;
+                suspicious_bytes += sb;
+                bytes += tb;
+                tc
             } else {
                 if is_audiofile(&p) {
-                    spinner.message(log_name(&p));
                     bytes += &p.metadata().unwrap().len();
+                    spinner.message(log_name(&p));
                     1
                 } else {
                     if is_pattern_ok(&p) && is_audiofile_ext(&p) {
                         suspicious += 1;
+                        suspicious_bytes += &p.metadata().unwrap().len();
                         log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(&p)))
                     }
                     0
@@ -981,7 +990,7 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
         })
         .sum();
 
-    (suspicious, tracks, bytes)
+    (suspicious, suspicious_bytes, tracks, bytes)
 }
 
 fn main() {
@@ -994,7 +1003,7 @@ fn main() {
     let now = Instant::now();
     let mut spinner = spin::DaddySpinner::new();
 
-    let (suspicious_total, tracks_total, bytes_total) =
+    let (suspicious_total, suspicious_bytes_total, tracks_total, bytes_total) =
         tracks_count(src.as_path(), &mut spinner, &mut log);
 
     spinner.stop();
@@ -1037,8 +1046,10 @@ fn main() {
     }
     if suspicious_total > 0 {
         println!(
-            " {} Suspicious, skipped: {} file(s)",
-            RSUSP_ICON, suspicious_total
+            " {} Suspicious, skipped: {} file(s); Volume: {}",
+            RSUSP_ICON,
+            suspicious_total,
+            human_fine(suspicious_bytes_total)
         );
     }
 
