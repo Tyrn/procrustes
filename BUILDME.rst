@@ -7,11 +7,18 @@ Development
 ===========
 
 - `Format Rust code <https://github.com/rust-lang/rustfmt>`__
-- `TagLib <https://github.com/taglib/taglib>`__ library, release build, is required on the system. For the Archlinux family available on AUR:
+- `TagLib <https://github.com/taglib/taglib>`__ library, release build, required on the system; `Rust bindings <https://github.com/ebassi/taglib-rust>`__ .
+- For the Archlinux family, available on AUR:
 
 ::
 
     $ yay -S taglib-git
+
+- Ubuntu/Debian:
+
+::
+
+    $ sudo apt-get install libtagc0-dev
 
 Build
 -----
