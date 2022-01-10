@@ -938,7 +938,7 @@ fn tracks_count(dir: &Path, spinner: &mut dyn Spinner, log: &mut Vec<String>) ->
         )
     }
     fn log_name(p: &Path) -> String {
-        String::from(p.file_name().unwrap().to_str().unwrap().to_string())
+        p.file_name().unwrap().to_str().unwrap().to_string()
     }
 
     if dir.is_file() {
