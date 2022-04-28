@@ -224,8 +224,8 @@ fn args_retrieve() -> ArgMatches {
             Arg::new("u")
                 .short('u')
                 .long("unified-name")
-                .value_name("UNIFIED_NAME")
-                .help("UNIFIED_NAME for everything unspecified")
+                .value_name("UNAME")
+                .help("UNAME for everything unspecified")
                 .takes_value(true),
         )
         .arg(
