@@ -7,7 +7,7 @@ use crate::spinner::Spinner;
 
 use alphanumeric_sort::sort_path_slice;
 use chrono::{DateTime, Utc};
-use clap::{App, Arg, ArgMatches};
+use clap::{Command, Arg, ArgMatches};
 use glob;
 use itertools::join;
 use itertools::zip_eq;
@@ -130,7 +130,7 @@ fn pval(name: &str) -> PathBuf {
 /// options and arguments.
 ///
 fn args_retrieve() -> ArgMatches {
-    App::new("procrustes")
+    Command::new("procrustes")
         .version("v1.0.3")
         .author("")
         .about(APP_DESCRIPTION)
