@@ -7,7 +7,7 @@ use crate::spinner::Spinner;
 
 use alphanumeric_sort::sort_path_slice;
 use chrono::{DateTime, Utc};
-use clap::{Command, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use glob;
 use itertools::join;
 use itertools::zip_eq;
