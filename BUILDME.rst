@@ -48,7 +48,7 @@ Install to ``~/.cargo/bin``:
 
 ::
 
-    $ cargo install --path . [--debug]
+    $ cargo install --locked --path . [--debug]
 
 Publish
 -------
