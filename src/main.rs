@@ -34,7 +34,7 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     is set, tags \"Title\", \"Artist\", and \"Album\" can be replaced optionally. \
     The writing process is strictly sequential: either starting with the number one file, \
     or in the reverse order. This can be important for some mobile devices. \
-    \u{002754} Suspicious media. \
+    \u{002b50} Really useful options. \u{002754} Suspicious media. \
     \n\nExamples; <src> as a directory: \
     \n\nrobinson-crusoe $ procrustes -va 'Daniel \"Goldeneye\" Defoe' -m 'Robinson Crusoe' . \
     /run/media/player \
@@ -52,6 +52,7 @@ const COLUMN_ICON: &str = "\u{002714}";
 const LINK_ICON: &str = "\u{0026a1}";
 const START_ICON: &str = "\u{01f4a3}";
 const STOP_ICON: &str = "\u{01f4a5}";
+const USE_ICON: &str = "\u{002b50}";
 
 lazy_static! {
     static ref ARGS: ArgMatches = args_retrieve();
@@ -138,7 +139,7 @@ fn args_retrieve() -> ArgMatches {
             Arg::new("v")
                 .short('v')
                 .long("verbose")
-                .help("Verbose output"),
+                .help(&*format!("{} Verbose output", USE_ICON))
         )
         .arg(
             Arg::new("d")
@@ -225,7 +226,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('u')
                 .long("unified-name")
                 .value_name("UNAME")
-                .help("UNAME for everything unspecified")
+                .help(&*format!("{} UNAME for everything unspecified", USE_ICON))
                 .takes_value(true),
         )
         .arg(
@@ -241,7 +242,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('a')
                 .long("artist")
                 .value_name("ARTIST")
-                .help("Artist tag")
+                .help(&*format!("{} Artist tag", USE_ICON))
                 .takes_value(true),
         )
         .arg(
@@ -249,7 +250,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('m')
                 .long("album")
                 .value_name("ALBUM")
-                .help("Album tag")
+                .help(&*format!("{} Album tag", USE_ICON))
                 .takes_value(true),
         )
         .arg(
