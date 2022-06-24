@@ -660,7 +660,7 @@ fn track_decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> 
                 "{:01$}-[{2}]",
                 ii,
                 width,
-                join(step.iter().map(|p| p.to_str().unwrap()), ODELIM_ICON)
+                join(step.iter().map(|p| p.to_str().unwrap()), "][")
             )
         } else {
             format!("{:01$}", ii, width)
