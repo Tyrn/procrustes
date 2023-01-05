@@ -160,6 +160,8 @@ fn test_initials() {
     assert_eq!(initials("Anselm haut Rodric"), "A.h.R.");
     assert_eq!(initials("Ансельм от Родрик"), "А.о.Р.");
     assert_eq!(initials("Leonardo Wilhelm DiCaprio"), "L.W.DiC.");
+    assert_eq!(initials("леонардо вильгельм ди каприо"), "Л.В.д.К.");
+    assert_eq!(initials("kapitän zur see"), "K.z.S.");
     assert_eq!(initials("De Beers, Guido van Rossum"), "D.B.,G.v.R.");
     assert_eq!(initials("Манфред фон Рихтгофен"), "М.ф.Р.");
     assert_eq!(initials("Armand Jean du Plessis"), "A.J.d.P.");

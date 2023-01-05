@@ -1212,10 +1212,11 @@ fn initials(authors: &str) -> String {
     lazy_static! {
         static ref SPACE: Regex = Regex::new(r"[\s.]+").unwrap();
         static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
-        static ref NOBILIARY_PARTICLES: [&'static str; 34] = [
-            "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "af", "аф", "of",
-            "из", "da", "да", "de", "де", "des", "дез", "del", "дель", "dos", "душ", "дос", "du",
-            "дю", "la", "ла", "ля", "le", "ле", "haut", "от",
+        static ref NOBILIARY_PARTICLES: [&'static str; 40] = [
+            "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "zum", "цум",
+            "zur", "цур", "af", "аф", "of", "из", "da", "да", "de", "де", "des", "дез", "del",
+            "дель", "di", "ди", "dos", "душ", "дос", "du", "дю", "la", "ла", "ля", "le", "ле",
+            "haut", "от",
         ];
     }
 
