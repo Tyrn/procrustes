@@ -154,7 +154,7 @@ fn test_initials() {
         "C.d.B.d.C.d'A."
     );
     assert_eq!(
-        initials("Mario Del Monaco, Hutchinson of London"),
+        initials("mario Del monaco, Hutchinson of London"),
         "M.D.M.,H.o.L."
     );
     assert_eq!(initials("Anselm haut Rodric"), "A.h.R.");

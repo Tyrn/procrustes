@@ -1252,7 +1252,9 @@ fn initials(authors: &str) -> String {
             }
         }
 
-        if v[0].chars().nth(0).unwrap().is_lowercase() && NOBILIARY_PARTICLES.iter().any(|&x| name == x) {
+        if v[0].chars().nth(0).unwrap().is_lowercase()
+            && NOBILIARY_PARTICLES.iter().any(|&x| name == x)
+        {
             return v[0].to_string();
         }
 
