@@ -934,7 +934,7 @@ fn tracks_count(
         };
         format!(
             "{}{} {}  {} {}",
-            &stamp.date().to_string()[..10],
+            &stamp.date_naive().to_string()[..10],
             icon,
             p.strip_prefix(env::current_dir().unwrap())
                 .unwrap()
