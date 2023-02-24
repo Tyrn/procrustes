@@ -1243,15 +1243,12 @@ fn initials(authors: &str) -> String {
 
         if v.len() > 1 {
             // Deal with prefixes.
-            let special_prefix = match name {
-                "Старший" => Some("Ст"),
-                "Младший" => Some("Мл"),
-                "Ст" | "ст" | "Sr" | "Мл" | "мл" | "Jr" => Some(name),
-                _ => None,
+            match name {
+                "Старший" => return "Ст".to_string(),
+                "Младший" => return "Мл".to_string(),
+                "Ст" | "ст" | "Sr" | "Мл" | "мл" | "Jr" => return name.to_string(),
+                _ => (),
             };
-            if special_prefix != None {
-                return special_prefix.unwrap().to_string();
-            }
             let mut prefix: Vec<&str> = vec![*v_iter.next().unwrap()];
             for vch in v_iter {
                 prefix.push(vch);
