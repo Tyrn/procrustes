@@ -1212,11 +1212,11 @@ fn initials(authors: &str) -> String {
     lazy_static! {
         static ref SPACE: Regex = Regex::new(r"[\s.]+").unwrap();
         static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
-        static ref NOBILIARY_PARTICLES: [&'static str; 40] = [
+        static ref NOBILIARY_PARTICLES: [&'static str; 41] = [
             "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "zum", "цум",
             "zur", "цур", "af", "аф", "of", "из", "da", "да", "de", "де", "des", "дез", "del",
             "дель", "di", "ди", "dos", "душ", "дос", "du", "дю", "la", "ла", "ля", "le", "ле",
-            "haut", "от",
+            "haut", "от", "the",
         ];
     }
 
@@ -1243,6 +1243,15 @@ fn initials(authors: &str) -> String {
 
         if v.len() > 1 {
             // Deal with prefixes.
+            let special_prefix = match name {
+                "Старший" => Some("Ст"),
+                "Младший" => Some("Мл"),
+                "Ст" | "ст" | "Sr" | "Мл" | "мл" | "Jr" => Some(name),
+                _ => None,
+            };
+            if special_prefix != None {
+                return special_prefix.unwrap().to_string();
+            }
             let mut prefix: Vec<&str> = vec![*v_iter.next().unwrap()];
             for vch in v_iter {
                 prefix.push(vch);

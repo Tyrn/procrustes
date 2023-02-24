@@ -177,4 +177,11 @@ fn test_initials() {
     assert_eq!(initials("Ross Macdonald"), "R.M.");
     assert_eq!(initials("DAMadar"), "DA.");
     assert_eq!(initials("johannes diderik van der waals"), "J.D.v.d.W.");
+    assert_eq!(initials("Плиний Старший"), "П.Ст.");
+    assert_eq!(initials("Pliny the Elder"), "P.t.E.");
+    assert_eq!(initials("Плиний Младший"), "П.Мл.");
+    assert_eq!(initials("Плиний Мл."), "П.Мл.");
+    assert_eq!(initials("George Smith Patton Jr."), "G.S.P.Jr.");
+    assert_eq!(initials("Джордж Смит паттон ст"), "Д.С.П.ст.");
+    assert_eq!(initials("Redington Sr"), "R.Sr.");
 }
