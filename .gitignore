@@ -4,7 +4,6 @@
 # IDE
 *.vim
 .nvimlog
-.projectile
 *.geany
 .idea
 *.sublime-project
