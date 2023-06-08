@@ -13,7 +13,7 @@ fn test_std_path() {
     let a1 = PathBuf::from(format!("{}{}{}", "alfa", sep, "bravo"));
     let a11 = PathBuf::from("alfa".to_owned() + &sep.to_string() + "bravo");
     let a2: PathBuf = [PathBuf::from("alfa"), PathBuf::from("bravo")]
-        .iter()
+        .into_iter()
         .collect();
     let mut a3 = PathBuf::from("alfa");
     a3.push("bravo");
