@@ -36,7 +36,7 @@ fn test_string() {
     let (head, _) = diac.split_at(10);
     assert_eq!(head, "Osudy dobr");
 
-    assert_eq!(diac.is_char_boundary(11), false);
+    assert!(!diac.is_char_boundary(11));
 
     // let (head, _) = diac.split_at(11);
     // assert_eq!(head, "Osudy dobre");
@@ -56,10 +56,10 @@ fn test_string() {
     let vecd = diac.chars().collect::<Vec<char>>();
 
     let (head, _) = vecd.split_at(10);
-    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobr");
+    assert_eq!(head.iter().collect::<String>(), "Osudy dobr");
 
     let (head, _) = vecd.split_at(11);
-    assert_eq!(head.into_iter().collect::<String>(), "Osudy dobré");
+    assert_eq!(head.iter().collect::<String>(), "Osudy dobré");
 }
 
 #[test]
@@ -99,9 +99,9 @@ fn test_is_audiofile_ext() {
 
 #[test]
 fn test_has_ext_of() {
-    assert_eq!(has_ext_of("charlie.ogg", "OGG"), true);
-    assert_eq!(has_ext_of("charlie.ogg", ".ogg"), true);
-    assert_eq!(has_ext_of("charlie.ogg", "mp3"), false);
+    assert!(has_ext_of("charlie.ogg", "OGG"));
+    assert!(has_ext_of("charlie.ogg", ".ogg"));
+    assert!(!has_ext_of("charlie.ogg", "mp3"));
 }
 
 #[test]

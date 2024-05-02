@@ -4,7 +4,7 @@ use spinners as pretty;
 use std::time::Duration;
 use terminal_spinners as cute;
 
-static MOON: [&'static str; 8] = [" 🌑", " 🌒", " 🌓", " 🌔", " 🌕", " 🌖", " 🌗", " 🌘"];
+static MOON: [&str; 8] = [" 🌑", " 🌒", " 🌓", " 🌔", " 🌕", " 🌖", " 🌗", " 🌘"];
 
 pub trait Shrinker {
     fn shrink_pretty(&self) -> String;
@@ -12,7 +12,7 @@ pub trait Shrinker {
 
 impl Shrinker for String {
     fn shrink_pretty(&self) -> String {
-        str_shrink(&self, 72) + BDELIM_ICON
+        str_shrink(self, 72) + BDELIM_ICON
     }
 }
 
@@ -71,7 +71,7 @@ impl Spinner for DaddySpinner {
         if let Some(spinner) = self.spinner.take() {
             spinner.close();
         }
-        println!("");
+        println!();
     }
 }
 
@@ -100,7 +100,7 @@ impl Spinner for PrettySpinner {
         if let Some(spinner) = self.spinner.take() {
             spinner.stop();
         }
-        println!("");
+        println!();
     }
 }
 

@@ -8,7 +8,6 @@ use crate::spinner::Spinner;
 use alphanumeric_sort::sort_path_slice;
 use chrono::{DateTime, Utc};
 use clap::{Arg, ArgMatches, Command};
-use glob;
 use itertools::join;
 use itertools::zip_eq;
 use regex::Regex;
@@ -21,7 +20,6 @@ use std::{
     process::exit,
     time::Instant,
 };
-use taglib;
 use tempfile::TempDir;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -91,11 +89,7 @@ lazy_static! {
 /// on the command line.
 ///
 fn flag(name: &str) -> bool {
-    if ARGS.occurrences_of(name) > 0 {
-        true
-    } else {
-        false
-    }
+    ARGS.occurrences_of(name) > 0
 }
 
 /// Returns the string value, associated with the [name] option.
@@ -119,12 +113,10 @@ fn ival(name: &str) -> i64 {
 /// Defined, if flag(name) is true.
 ///
 fn pval(name: &str) -> PathBuf {
-    Path::new(sval(name)).canonicalize().expect(&format!(
-        "{}File or directory \"{}\" does not exist.{}",
+    Path::new(sval(name)).canonicalize().unwrap_or_else(|_| panic!("{}File or directory \"{}\" does not exist.{}",
         BDELIM_ICON,
         sval(name),
-        BDELIM_ICON
-    ))
+        BDELIM_ICON))
 }
 
 /// Sets up command line parser, and gets the command line
@@ -273,14 +265,13 @@ fn args_retrieve() -> ArgMatches {
 ///
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
-        .into_iter()
         .filter(|r| r.is_ok())
         .map(|r| r.unwrap().path())
         .filter(|r| {
             if folders {
                 r.is_dir()
             } else {
-                is_audiofile(&r)
+                is_audiofile(r)
             }
         })
         .collect())
@@ -291,7 +282,6 @@ fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
 ///
 fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
     fs::read_dir(dir)?
-        .into_iter()
         .map(|x| x.map(|entry| entry.path()))
         .collect()
 }
@@ -396,16 +386,11 @@ fn dir_walk(dir: &PathBuf, step_down: Vec<PathBuf>) -> WalkIterator {
 /// Copies [src] to [dst], makes panic sensible.
 ///
 fn file_copy(src: &PathBuf, dst: &PathBuf) {
-    fs::copy(&src, &dst).expect(
-        format!(
-            "{}Error while copying \"{}\" to \"{}\".{}",
+    fs::copy(src, dst).unwrap_or_else(|_| panic!("{}Error while copying \"{}\" to \"{}\".{}",
             BDELIM_ICON,
             &src.to_str().unwrap(),
             &dst.to_str().unwrap(),
-            BDELIM_ICON,
-        )
-        .as_str(),
-    );
+            BDELIM_ICON));
 }
 
 /// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
@@ -432,16 +417,16 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
     fn tag_nop_track_number(_tag: &mut taglib::Tag, _ii: u64) {}
 
     fn tag_set_artist_album(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
-        tag.set_title(&TITLE_COMPOSE(ii, &src));
+        tag.set_title(&TITLE_COMPOSE(ii, src));
         tag.set_artist(&ARTIST);
         tag.set_album(&ALBUM);
     }
     fn tag_set_artist(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
-        tag.set_title(&TITLE_COMPOSE(ii, &src));
+        tag.set_title(&TITLE_COMPOSE(ii, src));
         tag.set_artist(&ARTIST);
     }
     fn tag_set_album(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
-        tag.set_title(&TITLE_COMPOSE(ii, &src));
+        tag.set_title(&TITLE_COMPOSE(ii, src));
         tag.set_album(&ALBUM);
     }
     fn tag_nop_all(_tag: &mut taglib::Tag, _ii: u64, _src: &PathBuf) {}
@@ -485,21 +470,16 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
             };
     }
 
-    let tag_file = taglib::File::new(&dst).expect(
-        format!(
-            "{}Error while opening \"{}\" for tagging.{}",
+    let tag_file = taglib::File::new(dst).unwrap_or_else(|_| panic!("{}Error while opening \"{}\" for tagging.{}",
             BDELIM_ICON,
             &dst.to_str().unwrap(),
-            BDELIM_ICON,
-        )
-        .as_str(),
-    );
+            BDELIM_ICON));
     let mut tag = tag_file
         .tag()
-        .expect(format!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON,).as_str());
+        .unwrap_or_else(|_| panic!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON));
 
     TAG_SET_TRACK_NUMBER(&mut tag, ii);
-    TAG_SET_THE_REST(&mut tag, ii, &src);
+    TAG_SET_THE_REST(&mut tag, ii, src);
 
     tag_file.save();
 }
@@ -508,8 +488,8 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
 /// Copies [src] to [dst], sets tags to [dst].
 ///
 fn file_copy_and_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
-    file_copy(&src, &dst);
-    file_set_tags(ii, &src, &dst);
+    file_copy(src, dst);
+    file_set_tags(ii, src, dst);
 }
 
 #[allow(dead_code)]
@@ -522,19 +502,14 @@ fn file_copy_and_set_tags_via_tmp(ii: u64, src: &PathBuf, dst: &PathBuf) {
         &src.extension().unwrap().to_str().unwrap()
     ));
 
-    file_copy(&src, &tmp);
-    file_set_tags(ii, &src, &tmp);
-    file_copy(&tmp, &dst);
+    file_copy(src, &tmp);
+    file_set_tags(ii, src, &tmp);
+    file_copy(&tmp, dst);
 
-    fs::remove_file(&tmp).expect(
-        format!(
-            "{}Error while deleting \"{}\" file.{}",
+    fs::remove_file(&tmp).unwrap_or_else(|_| panic!("{}Error while deleting \"{}\" file.{}",
             BDELIM_ICON,
             &tmp.to_str().unwrap(),
-            BDELIM_ICON,
-        )
-        .as_str(),
-    );
+            BDELIM_ICON));
 }
 
 /// Checks the source validity, and its compatibility with the destination.
@@ -619,15 +594,10 @@ fn dst_create() -> PathBuf {
     if !flag("p") && !flag("y") {
         if DST_DIR.exists() {
             if flag("w") {
-                fs::remove_dir_all(&DST_DIR.as_path()).expect(
-                    format!(
-                        "{}Failed to remove destination directory \"{}\".{}",
+                fs::remove_dir_all(DST_DIR.as_path()).unwrap_or_else(|_| panic!("{}Failed to remove destination directory \"{}\".{}",
                         BDELIM_ICON,
                         DST_DIR.display(),
-                        BDELIM_ICON,
-                    )
-                    .as_str(),
-                );
+                        BDELIM_ICON));
             } else {
                 println!(
                     " {} Destination directory \"{}\" already exists.",
@@ -637,15 +607,10 @@ fn dst_create() -> PathBuf {
                 exit(1);
             }
         }
-        fs::create_dir(&DST_DIR.as_path()).expect(
-            format!(
-                "{}Destination directory \"{}\" already exists!{}",
+        fs::create_dir(DST_DIR.as_path()).unwrap_or_else(|_| panic!("{}Destination directory \"{}\" already exists!{}",
                 BDELIM_ICON,
                 DST_DIR.display(),
-                BDELIM_ICON,
-            )
-            .as_str(),
-        );
+                BDELIM_ICON));
     }
     DST_DIR.to_path_buf()
 }
@@ -655,7 +620,7 @@ fn dst_create() -> PathBuf {
 ///
 fn track_decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
     fn prefix_subdir_make(ii: u64, step: &Vec<PathBuf>, width: usize) -> String {
-        if step.len() > 0 {
+        if !step.is_empty() {
             format!(
                 "{:01$}-[{2}]",
                 ii,
@@ -733,15 +698,10 @@ fn track_copy(
 
     fn step_create_dir(dst: &PathBuf, step: &PathBuf) {
         let dst_dir = dst.join(step);
-        fs::create_dir_all(&dst_dir).expect(
-            format!(
-                "{}Error while creating \"{}\" directory.{}",
+        fs::create_dir_all(&dst_dir).unwrap_or_else(|_| panic!("{}Error while creating \"{}\" directory.{}",
                 BDELIM_ICON,
                 &dst_dir.to_str().unwrap(),
-                BDELIM_ICON,
-            )
-            .as_str(),
-        );
+                BDELIM_ICON));
     }
 
     fn file_nop_copytags(_ii: u64, _src: &PathBuf, _dst: &PathBuf, _log: &mut Vec<String>) -> u64 {
@@ -784,7 +744,7 @@ fn track_copy(
                 print!("  {} {:+}", COLUMN_ICON, growth);
             }
         }
-        println!("");
+        println!();
     }
     fn out_track_terse(
         _ii: u64,
@@ -826,13 +786,13 @@ fn track_copy(
     STEP_CREATE_DIR(dst, &stride);
     let dst_file = dst
         .join(&stride)
-        .join(&track_decorate(ii, src_file, step, width));
+        .join(track_decorate(ii, src_file, step, width));
 
     OUT_TRACK(
         ii,
         width,
         tracks_total,
-        &dst_file.to_str().unwrap(),
+        dst_file.to_str().unwrap(),
         FILE_COPYTAGS(ii, src_file, &dst_file, log),
         src_file.metadata().unwrap().len(),
     );
@@ -951,8 +911,8 @@ fn tracks_count(
     if dir.is_file() {
         if is_audiofile(dir) {
             return (0, 0, 1, dir.metadata().unwrap().len());
-        } else if is_pattern_ok(&dir) && is_audiofile_ext(&dir) {
-            log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(&dir)));
+        } else if is_pattern_ok(dir) && is_audiofile_ext(dir) {
+            log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(dir)));
             return (1, dir.metadata().unwrap().len(), 0, 0);
         }
         return (0, 0, 0, 0);
@@ -964,7 +924,6 @@ fn tracks_count(
 
     let tracks = fs::read_dir(dir)
         .unwrap()
-        .into_iter()
         .filter(|r| r.is_ok())
         .map(|r| {
             let p = r.unwrap().path();
@@ -974,19 +933,17 @@ fn tracks_count(
                 suspicious_bytes += sb;
                 bytes += tb;
                 tc
+            } else if is_audiofile(&p) {
+                bytes += &p.metadata().unwrap().len();
+                spinner.message(log_name(&p));
+                1
             } else {
-                if is_audiofile(&p) {
-                    bytes += &p.metadata().unwrap().len();
-                    spinner.message(log_name(&p));
-                    1
-                } else {
-                    if is_pattern_ok(&p) && is_audiofile_ext(&p) {
-                        suspicious += 1;
-                        suspicious_bytes += &p.metadata().unwrap().len();
-                        log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(&p)))
-                    }
-                    0
+                if is_pattern_ok(&p) && is_audiofile_ext(&p) {
+                    suspicious += 1;
+                    suspicious_bytes += &p.metadata().unwrap().len();
+                    log.push(format!(" {} {}", SUSPICIOUS_ICON, log_name_v(&p)))
                 }
+                0
             }
         })
         .sum();
@@ -1108,12 +1065,12 @@ fn str_shrink(s: &str, limit: usize) -> String {
         let (_, tt) = tail.split_at(tail.len() - limit / 2);
         return format!(
             "{} {} {}",
-            hh.into_iter().collect::<String>().trim(),
+            hh.iter().collect::<String>().trim(),
             LINK_ICON,
-            tt.into_iter().collect::<String>().trim()
+            tt.iter().collect::<String>().trim()
         );
     }
-    return s.into_iter().collect();
+    s.into_iter().collect()
 }
 
 /// Returns true, if [path] satisfies file-type (-e) CLI suggestion,
@@ -1124,7 +1081,7 @@ fn is_pattern_ok(path: &Path) -> bool {
     fn is_regex() -> bool {
         if flag("e") {
             let e = sval("e");
-            e.contains("*") || e.contains("[") || e.contains("]") || e.contains("?")
+            e.contains('*') || e.contains('[') || e.contains(']') || e.contains('?')
         } else {
             false
         }
@@ -1133,7 +1090,7 @@ fn is_pattern_ok(path: &Path) -> bool {
         true
     }
     fn is_ext_matching(path: &Path) -> bool {
-        has_ext_of(path.to_str().unwrap(), &*EXT)
+        has_ext_of(path.to_str().unwrap(), &EXT)
     }
     fn is_pattern_matching(path: &Path) -> bool {
         (*PATTERN).matches(path.file_name().unwrap().to_str().unwrap())
@@ -1176,10 +1133,7 @@ fn is_audiofile(path: &Path) -> bool {
     if is_pattern_ok(path) {
         match taglib::File::new(path) {
             Err(_) => false,
-            Ok(v) => match v.tag() {
-                Err(_) => false,
-                Ok(_) => true,
-            },
+            Ok(v) => v.tag().is_ok(),
         }
     } else {
         false
@@ -1188,7 +1142,7 @@ fn is_audiofile(path: &Path) -> bool {
 
 fn has_ext_of(path: &str, ext: &str) -> bool {
     let p = path.to_uppercase();
-    let e = ext.to_uppercase().replace(".", "");
+    let e = ext.to_uppercase().replace('.', "");
     Path::new(&p).extension() == Some(OsStr::new(&e))
 }
 
@@ -1228,14 +1182,14 @@ fn initials(authors: &str) -> String {
     /// and dropping the rest; deals with special cases, too. See the unit test.
     ///
     fn initial(name: &str) -> String {
-        let cut: Vec<&str> = name.split("'").collect();
+        let cut: Vec<&str> = name.split('\'').collect();
 
         if cut.len() > 1 && !cut[1].is_empty() {
             // Deal with '.
             if cut[1].chars().next().unwrap().is_lowercase() && !cut[0].is_empty() {
                 return gv(cut[0])[0].to_uppercase();
             }
-            return cut[0].to_owned() + "'" + &gv(cut[1])[0];
+            return cut[0].to_owned() + "'" + gv(cut[1])[0];
         }
 
         let v = gv(name);
@@ -1258,7 +1212,7 @@ fn initials(authors: &str) -> String {
             }
         }
 
-        if v[0].chars().nth(0).unwrap().is_lowercase()
+        if v[0].chars().next().unwrap().is_lowercase()
             && NOBILIARY_PARTICLES.iter().any(|&x| name == x)
         {
             return v[0].to_string();
@@ -1270,21 +1224,21 @@ fn initials(authors: &str) -> String {
     join(
         NICKNAME
             .replace_all(authors, " ")
-            .replace("\"", " ")
-            .split(",")
-            .filter(|author| author.replace(".", "").replace("-", "").trim() != "")
+            .replace('"', " ")
+            .split(',')
+            .filter(|author| author.replace(['.', '-'], "").trim() != "")
             .map(|author| {
                 [
                     join(
                         author
-                            .split("-")
-                            .filter(|barrel| barrel.replace(".", "").trim() != "")
+                            .split('-')
+                            .filter(|barrel| barrel.replace('.', "").trim() != "")
                             .map(|barrel| {
                                 join(
                                     SPACE
                                         .split(barrel)
                                         .filter(|name| !name.is_empty())
-                                        .map(|name| initial(name)),
+                                        .map(initial),
                                     ".",
                                 )
                             }),
