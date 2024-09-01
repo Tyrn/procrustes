@@ -724,9 +724,11 @@ fn track_copy(
         });
     }
 
+    #[allow(clippy::ptr_arg)]
     fn file_nop_copytags(_ii: u64, _src: &Path, _dst: &Path, _log: &mut Vec<String>) -> u64 {
         0
     }
+
     fn file_copytags(ii: u64, src: &Path, dst: &Path, log: &mut Vec<String>) -> u64 {
         let mut dst_bytes: u64 = 0;
 
