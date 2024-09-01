@@ -330,7 +330,7 @@ type WalkMakeItemFn = dyn Fn(PathBuf) -> WalkItem;
 /// Item is a tuple of
 /// (audiofile, Vec<subdirectory (to be created at destination/to make it possible)>).
 ///
-fn dir_walk(dir: &PathBuf, step_down: Vec<PathBuf>) -> WalkIterator {
+fn dir_walk(dir: &Path, step_down: Vec<PathBuf>) -> WalkIterator {
     fn stream_forward(
         dirs: Vec<PathBuf>,
         files: Vec<PathBuf>,
@@ -383,7 +383,7 @@ fn dir_walk(dir: &PathBuf, step_down: Vec<PathBuf>) -> WalkIterator {
 
 /// Copies [src] to [dst], makes panic sensible.
 ///
-fn file_copy(src: &PathBuf, dst: &PathBuf) {
+fn file_copy(src: &Path, dst: &Path) {
     fs::copy(src, dst).unwrap_or_else(|_| {
         panic!(
             "{}Error while copying \"{}\" to \"{}\".{}",
@@ -398,18 +398,18 @@ fn file_copy(src: &PathBuf, dst: &PathBuf) {
 /// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
 /// composition.
 ///
-fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
-    fn title_fi(ii: u64, src: &PathBuf) -> String {
+fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
+    fn title_fi(ii: u64, src: &Path) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
         format!("{}>{}", ii, &stem)
     }
-    fn title_f(_ii: u64, src: &PathBuf) -> String {
+    fn title_f(_ii: u64, src: &Path) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
         stem.to_string()
     }
-    fn title_i(ii: u64, _src: &PathBuf) -> String {
+    fn title_i(ii: u64, _src: &Path) -> String {
         format!("{} {}", ii, *TITLE_TAIL)
     }
 
@@ -418,20 +418,20 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
     }
     fn tag_nop_track_number(_tag: &mut taglib::Tag, _ii: u64) {}
 
-    fn tag_set_artist_album(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
+    fn tag_set_artist_album(tag: &mut taglib::Tag, ii: u64, src: &Path) {
         tag.set_title(&TITLE_COMPOSE(ii, src));
         tag.set_artist(&ARTIST);
         tag.set_album(&ALBUM);
     }
-    fn tag_set_artist(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
+    fn tag_set_artist(tag: &mut taglib::Tag, ii: u64, src: &Path) {
         tag.set_title(&TITLE_COMPOSE(ii, src));
         tag.set_artist(&ARTIST);
     }
-    fn tag_set_album(tag: &mut taglib::Tag, ii: u64, src: &PathBuf) {
+    fn tag_set_album(tag: &mut taglib::Tag, ii: u64, src: &Path) {
         tag.set_title(&TITLE_COMPOSE(ii, src));
         tag.set_album(&ALBUM);
     }
-    fn tag_nop_all(_tag: &mut taglib::Tag, _ii: u64, _src: &PathBuf) {}
+    fn tag_nop_all(_tag: &mut taglib::Tag, _ii: u64, _src: &Path) {}
 
     lazy_static! {
         static ref INITIALS: String = if *IS_ARTIST {
@@ -448,7 +448,7 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
         } else {
             "".to_string()
         };
-        static ref TITLE_COMPOSE: fn(u64, &PathBuf) -> String = if flag("F") {
+        static ref TITLE_COMPOSE: fn(u64, &Path) -> String = if flag("F") {
             title_fi
         } else if flag("f") {
             title_f
@@ -460,16 +460,15 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
         } else {
             tag_set_track_number
         };
-        static ref TAG_SET_THE_REST: fn(&mut taglib::Tag, u64, &PathBuf) =
-            if *IS_ARTIST && *IS_ALBUM {
-                tag_set_artist_album
-            } else if *IS_ARTIST {
-                tag_set_artist
-            } else if *IS_ALBUM {
-                tag_set_album
-            } else {
-                tag_nop_all
-            };
+        static ref TAG_SET_THE_REST: fn(&mut taglib::Tag, u64, &Path) = if *IS_ARTIST && *IS_ALBUM {
+            tag_set_artist_album
+        } else if *IS_ARTIST {
+            tag_set_artist
+        } else if *IS_ALBUM {
+            tag_set_album
+        } else {
+            tag_nop_all
+        };
     }
 
     let tag_file = taglib::File::new(dst).unwrap_or_else(|_| {
@@ -493,7 +492,7 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
 #[allow(dead_code)]
 /// Copies [src] to [dst], sets tags to [dst].
 ///
-fn file_copy_and_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
+fn file_copy_and_set_tags(ii: u64, src: &Path, dst: &Path) {
     file_copy(src, dst);
     file_set_tags(ii, src, dst);
 }
@@ -501,7 +500,7 @@ fn file_copy_and_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
 #[allow(dead_code)]
 /// Copies [src] to [dst], sets tags using a temporary file.
 ///
-fn file_copy_and_set_tags_via_tmp(ii: u64, src: &PathBuf, dst: &PathBuf) {
+fn file_copy_and_set_tags_via_tmp(ii: u64, src: &Path, dst: &Path) {
     let tmp_dir = TempDir::new().unwrap(); // Keep it!
     let tmp = tmp_dir.path().join(format!(
         "tmpaudio.{}",
@@ -636,8 +635,8 @@ fn dst_create() -> PathBuf {
 /// Extracts file name from the [src] track (number [ii])
 /// and makes it pretty, if necessary.
 ///
-fn track_decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
-    fn prefix_subdir_make(ii: u64, step: &Vec<PathBuf>, width: usize) -> String {
+fn track_decorate(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBuf {
+    fn prefix_subdir_make(ii: u64, step: &[PathBuf], width: usize) -> String {
         if !step.is_empty() {
             format!(
                 "{:01$}-[{2}]",
@@ -649,10 +648,10 @@ fn track_decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> 
             format!("{:01$}", ii, width)
         }
     }
-    fn prefix_make(ii: u64, _step: &Vec<PathBuf>, width: usize) -> String {
+    fn prefix_make(ii: u64, _step: &[PathBuf], width: usize) -> String {
         format!("{:01$}", ii, width)
     }
-    fn decorate_unified(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+    fn decorate_unified(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBuf {
         PathBuf::from(format!(
             "{}-{}{}.{}",
             PREFIX_MAKE(ii, step, width),
@@ -661,25 +660,24 @@ fn track_decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> 
             src.extension().unwrap().to_str().unwrap()
         ))
     }
-    fn decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> PathBuf {
+    fn decorate(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBuf {
         PathBuf::from(format!(
             "{}-{}",
             PREFIX_MAKE(ii, step, width),
             src.file_name().unwrap().to_str().unwrap()
         ))
     }
-    fn decorate_nop(_ii: u64, src: &PathBuf, _step: &Vec<PathBuf>, _width: usize) -> PathBuf {
+    fn decorate_nop(_ii: u64, src: &Path, _step: &[PathBuf], _width: usize) -> PathBuf {
         PathBuf::from(src.file_name().unwrap())
     }
 
     lazy_static! {
-        static ref PREFIX_MAKE: fn(u64, &Vec<PathBuf>, usize) -> String = if flag("i") && !flag("t")
-        {
+        static ref PREFIX_MAKE: fn(u64, &[PathBuf], usize) -> String = if flag("i") && !flag("t") {
             prefix_subdir_make
         } else {
             prefix_make
         };
-        static ref DECORATE: fn(u64, &PathBuf, &Vec<PathBuf>, usize) -> PathBuf =
+        static ref DECORATE: fn(u64, &Path, &[PathBuf], usize) -> PathBuf =
             if flag("s") && flag("t") {
                 decorate_nop
             } else if *IS_UNIFIED {
@@ -698,23 +696,23 @@ fn track_decorate(ii: u64, src: &PathBuf, step: &Vec<PathBuf>, width: usize) -> 
 ///
 fn track_copy(
     ii: u64,
-    src_file: &PathBuf,
-    step: &Vec<PathBuf>, // All the subdirectories to be created below [dst].
-    dst: &PathBuf,       // Basic destination directory.
+    src_file: &Path,
+    step: &[PathBuf], // All the subdirectories to be created below [dst].
+    dst: &Path,       // Basic destination directory.
     width: usize,
     tracks_total: u64,
     log: &mut Vec<String>,
 ) {
-    fn step_flat_collect(_step: &Vec<PathBuf>) -> PathBuf {
+    fn step_flat_collect(_step: &[PathBuf]) -> PathBuf {
         PathBuf::new()
     }
-    fn step_collect(step: &Vec<PathBuf>) -> PathBuf {
+    fn step_collect(step: &[PathBuf]) -> PathBuf {
         step.iter().collect()
     }
 
-    fn step_nop_create_dir(_dst: &PathBuf, _step: &PathBuf) {}
+    fn step_nop_create_dir(_dst: &Path, _step: &Path) {}
 
-    fn step_create_dir(dst: &PathBuf, step: &PathBuf) {
+    fn step_create_dir(dst: &Path, step: &Path) {
         let dst_dir = dst.join(step);
         fs::create_dir_all(&dst_dir).unwrap_or_else(|_| {
             panic!(
@@ -726,10 +724,10 @@ fn track_copy(
         });
     }
 
-    fn file_nop_copytags(_ii: u64, _src: &PathBuf, _dst: &PathBuf, _log: &mut Vec<String>) -> u64 {
+    fn file_nop_copytags(_ii: u64, _src: &Path, _dst: &Path, _log: &mut Vec<String>) -> u64 {
         0
     }
-    fn file_copytags(ii: u64, src: &PathBuf, dst: &PathBuf, log: &mut Vec<String>) -> u64 {
+    fn file_copytags(ii: u64, src: &Path, dst: &Path, log: &mut Vec<String>) -> u64 {
         let mut dst_bytes: u64 = 0;
 
         if dst.is_file() {
@@ -781,22 +779,21 @@ fn track_copy(
     }
 
     lazy_static! {
-        static ref STEP_COLLECT: fn(&Vec<PathBuf>) -> PathBuf = if flag("t") {
+        static ref STEP_COLLECT: fn(&[PathBuf]) -> PathBuf = if flag("t") {
             step_collect
         } else {
             step_flat_collect
         };
-        static ref STEP_CREATE_DIR: fn(&PathBuf, &PathBuf) = if flag("t") && !flag("y") {
+        static ref STEP_CREATE_DIR: fn(&Path, &Path) = if flag("t") && !flag("y") {
             step_create_dir
         } else {
             step_nop_create_dir
         };
-        static ref FILE_COPYTAGS: fn(u64, &PathBuf, &PathBuf, &mut Vec<String>) -> u64 =
-            if flag("y") {
-                file_nop_copytags
-            } else {
-                file_copytags
-            };
+        static ref FILE_COPYTAGS: fn(u64, &Path, &Path, &mut Vec<String>) -> u64 = if flag("y") {
+            file_nop_copytags
+        } else {
+            file_copytags
+        };
         static ref OUT_TRACK: fn(u64, usize, u64, &str, u64, u64) = if flag("v") {
             out_track_verbose
         } else {
@@ -825,8 +822,8 @@ fn track_copy(
 ///
 fn album_copy(
     now: &Instant,
-    src: &PathBuf,
-    dst: &PathBuf,
+    src: &Path,
+    dst: &Path,
     tracks_total: u64,
     bytes_total: u64,
     log: &mut Vec<String>,
