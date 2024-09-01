@@ -113,10 +113,14 @@ fn ival(name: &str) -> i64 {
 /// Defined, if flag(name) is true.
 ///
 fn pval(name: &str) -> PathBuf {
-    Path::new(sval(name)).canonicalize().unwrap_or_else(|_| panic!("{}File or directory \"{}\" does not exist.{}",
-        BDELIM_ICON,
-        sval(name),
-        BDELIM_ICON))
+    Path::new(sval(name)).canonicalize().unwrap_or_else(|_| {
+        panic!(
+            "{}File or directory \"{}\" does not exist.{}",
+            BDELIM_ICON,
+            sval(name),
+            BDELIM_ICON
+        )
+    })
 }
 
 /// Sets up command line parser, and gets the command line
@@ -267,13 +271,7 @@ fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
         .filter(|r| r.is_ok())
         .map(|r| r.unwrap().path())
-        .filter(|r| {
-            if folders {
-                r.is_dir()
-            } else {
-                is_audiofile(r)
-            }
-        })
+        .filter(|r| if folders { r.is_dir() } else { is_audiofile(r) })
         .collect())
 }
 
@@ -289,25 +287,25 @@ fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
 /// Returns sorted vectors of directories and audiofiles inside [dir].
 ///
 fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
-    fn sort_lex(dirs: &mut Vec<PathBuf>, files: &mut Vec<PathBuf>) {
+    fn sort_lex(dirs: &mut [PathBuf], files: &mut [PathBuf]) {
         dirs.sort_unstable();
         files.sort_unstable();
     }
-    fn sort_naturally(dirs: &mut Vec<PathBuf>, files: &mut Vec<PathBuf>) {
+    fn sort_naturally(dirs: &mut [PathBuf], files: &mut [PathBuf]) {
         sort_path_slice(dirs);
         sort_path_slice(files);
     }
 
-    fn reverse(dirs: &mut Vec<PathBuf>, files: &mut Vec<PathBuf>) {
+    fn reverse(dirs: &mut [PathBuf], files: &mut [PathBuf]) {
         dirs.reverse();
         files.reverse();
     }
-    fn reverse_nop(_dirs: &mut Vec<PathBuf>, _files: &mut Vec<PathBuf>) {}
+    fn reverse_nop(_dirs: &mut [PathBuf], _files: &mut [PathBuf]) {}
 
     lazy_static! {
-        static ref SORT: fn(&mut Vec<PathBuf>, &mut Vec<PathBuf>) =
+        static ref SORT: fn(&mut [PathBuf], &mut [PathBuf]) =
             if flag("x") { sort_lex } else { sort_naturally };
-        static ref REVERSE: fn(&mut Vec<PathBuf>, &mut Vec<PathBuf>) =
+        static ref REVERSE: fn(&mut [PathBuf], &mut [PathBuf]) =
             if flag("r") { reverse } else { reverse_nop };
     }
 
@@ -386,11 +384,15 @@ fn dir_walk(dir: &PathBuf, step_down: Vec<PathBuf>) -> WalkIterator {
 /// Copies [src] to [dst], makes panic sensible.
 ///
 fn file_copy(src: &PathBuf, dst: &PathBuf) {
-    fs::copy(src, dst).unwrap_or_else(|_| panic!("{}Error while copying \"{}\" to \"{}\".{}",
+    fs::copy(src, dst).unwrap_or_else(|_| {
+        panic!(
+            "{}Error while copying \"{}\" to \"{}\".{}",
             BDELIM_ICON,
             &src.to_str().unwrap(),
             &dst.to_str().unwrap(),
-            BDELIM_ICON));
+            BDELIM_ICON
+        )
+    });
 }
 
 /// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
@@ -470,10 +472,14 @@ fn file_set_tags(ii: u64, src: &PathBuf, dst: &PathBuf) {
             };
     }
 
-    let tag_file = taglib::File::new(dst).unwrap_or_else(|_| panic!("{}Error while opening \"{}\" for tagging.{}",
+    let tag_file = taglib::File::new(dst).unwrap_or_else(|_| {
+        panic!(
+            "{}Error while opening \"{}\" for tagging.{}",
             BDELIM_ICON,
             &dst.to_str().unwrap(),
-            BDELIM_ICON));
+            BDELIM_ICON
+        )
+    });
     let mut tag = tag_file
         .tag()
         .unwrap_or_else(|_| panic!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON));
@@ -506,10 +512,14 @@ fn file_copy_and_set_tags_via_tmp(ii: u64, src: &PathBuf, dst: &PathBuf) {
     file_set_tags(ii, src, &tmp);
     file_copy(&tmp, dst);
 
-    fs::remove_file(&tmp).unwrap_or_else(|_| panic!("{}Error while deleting \"{}\" file.{}",
+    fs::remove_file(&tmp).unwrap_or_else(|_| {
+        panic!(
+            "{}Error while deleting \"{}\" file.{}",
             BDELIM_ICON,
             &tmp.to_str().unwrap(),
-            BDELIM_ICON));
+            BDELIM_ICON
+        )
+    });
 }
 
 /// Checks the source validity, and its compatibility with the destination.
@@ -594,10 +604,14 @@ fn dst_create() -> PathBuf {
     if !flag("p") && !flag("y") {
         if DST_DIR.exists() {
             if flag("w") {
-                fs::remove_dir_all(DST_DIR.as_path()).unwrap_or_else(|_| panic!("{}Failed to remove destination directory \"{}\".{}",
+                fs::remove_dir_all(DST_DIR.as_path()).unwrap_or_else(|_| {
+                    panic!(
+                        "{}Failed to remove destination directory \"{}\".{}",
                         BDELIM_ICON,
                         DST_DIR.display(),
-                        BDELIM_ICON));
+                        BDELIM_ICON
+                    )
+                });
             } else {
                 println!(
                     " {} Destination directory \"{}\" already exists.",
@@ -607,10 +621,14 @@ fn dst_create() -> PathBuf {
                 exit(1);
             }
         }
-        fs::create_dir(DST_DIR.as_path()).unwrap_or_else(|_| panic!("{}Destination directory \"{}\" already exists!{}",
+        fs::create_dir(DST_DIR.as_path()).unwrap_or_else(|_| {
+            panic!(
+                "{}Destination directory \"{}\" already exists!{}",
                 BDELIM_ICON,
                 DST_DIR.display(),
-                BDELIM_ICON));
+                BDELIM_ICON
+            )
+        });
     }
     DST_DIR.to_path_buf()
 }
@@ -698,10 +716,14 @@ fn track_copy(
 
     fn step_create_dir(dst: &PathBuf, step: &PathBuf) {
         let dst_dir = dst.join(step);
-        fs::create_dir_all(&dst_dir).unwrap_or_else(|_| panic!("{}Error while creating \"{}\" directory.{}",
+        fs::create_dir_all(&dst_dir).unwrap_or_else(|_| {
+            panic!(
+                "{}Error while creating \"{}\" directory.{}",
                 BDELIM_ICON,
                 &dst_dir.to_str().unwrap(),
-                BDELIM_ICON));
+                BDELIM_ICON
+            )
+        });
     }
 
     fn file_nop_copytags(_ii: u64, _src: &PathBuf, _dst: &PathBuf, _log: &mut Vec<String>) -> u64 {
