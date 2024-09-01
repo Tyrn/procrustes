@@ -8,11 +8,11 @@ Development
 
 - `Format Rust code <https://github.com/rust-lang/rustfmt>`__
 - `TagLib <https://github.com/taglib/taglib>`__ library, release build, required on the system; `Rust bindings <https://github.com/ebassi/taglib-rust>`__ .
-- For the Archlinux family, just check `taglib` which sould be already there:
+- Arch Linux family:
 
 ::
 
-    $ yay -S taglib
+    $ yay -S taglib1
 
 - Ubuntu/Debian:
 
