@@ -893,6 +893,7 @@ fn album_copy(
 /// in the form of a tuple:
 /// (
 /// Full count of the files with common extensions, which failed to open (suspicious),
+/// Sum of all the sizes of the suspicious audiofiles/tracks (suspicious bytes)
 /// Full count of the valid audiofiles (tracks),
 /// Sum of all the sizes of the valid audiofiles (bytes)
 /// )
