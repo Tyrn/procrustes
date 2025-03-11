@@ -20,6 +20,12 @@ Development
 
     $ sudo apt-get install libtagc0-dev
 
+- Fedora:
+
+::
+
+    $ sudo dnf install taglib-devel
+
 Build
 -----
 
