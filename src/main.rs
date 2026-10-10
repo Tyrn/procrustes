@@ -399,6 +399,7 @@ fn file_copy(src: &Path, dst: &Path) {
 /// composition.
 ///
 fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
+    let _silence = gag::Gag::stderr().unwrap();
     fn title_fi(ii: u64, src: &Path) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
@@ -1152,6 +1153,8 @@ fn is_audiofile_ext(path: &Path) -> bool {
 /// Returns true, if [path] is a valid audio file, otherwise false.
 ///
 fn is_audiofile(path: &Path) -> bool {
+    let _silence = gag::Gag::stderr().unwrap();
+
     if is_pattern_ok(path) {
         match taglib::File::new(path) {
             Err(_) => false,
