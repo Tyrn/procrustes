@@ -388,8 +388,8 @@ fn file_copy(src: &Path, dst: &Path) {
         panic!(
             "{}Error while copying \"{}\" to \"{}\".{}",
             BDELIM_ICON,
-            &src.to_str().unwrap(),
-            &dst.to_str().unwrap(),
+            src.to_str().unwrap(),
+            dst.to_str().unwrap(),
             BDELIM_ICON
         )
     });
@@ -403,7 +403,7 @@ fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
     fn title_fi(ii: u64, src: &Path) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
-        format!("{}>{}", ii, &stem)
+        format!("{}>{}", ii, stem)
     }
     fn title_f(_ii: u64, src: &Path) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
@@ -476,7 +476,7 @@ fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
         panic!(
             "{}Error while opening \"{}\" for tagging.{}",
             BDELIM_ICON,
-            &dst.to_str().unwrap(),
+            dst.to_str().unwrap(),
             BDELIM_ICON
         )
     });
@@ -505,7 +505,7 @@ fn file_copy_and_set_tags_via_tmp(ii: u64, src: &Path, dst: &Path) {
     let tmp_dir = TempDir::new().unwrap(); // Keep it!
     let tmp = tmp_dir.path().join(format!(
         "tmpaudio.{}",
-        &src.extension().unwrap().to_str().unwrap()
+        src.extension().unwrap().to_str().unwrap()
     ));
 
     file_copy(src, &tmp);
@@ -516,7 +516,7 @@ fn file_copy_and_set_tags_via_tmp(ii: u64, src: &Path, dst: &Path) {
         panic!(
             "{}Error while deleting \"{}\" file.{}",
             BDELIM_ICON,
-            &tmp.to_str().unwrap(),
+            tmp.to_str().unwrap(),
             BDELIM_ICON
         )
     });
@@ -719,7 +719,7 @@ fn track_copy(
             panic!(
                 "{}Error while creating \"{}\" directory.{}",
                 BDELIM_ICON,
-                &dst_dir.to_str().unwrap(),
+                dst_dir.to_str().unwrap(),
                 BDELIM_ICON
             )
         });
@@ -737,7 +737,7 @@ fn track_copy(
             log.push(format!(
                 " {} File \"{}\" already copied. Review your options.",
                 WARNING_ICON,
-                &dst.file_name().unwrap().to_str().unwrap()
+                dst.file_name().unwrap().to_str().unwrap()
             ));
         } else {
             file_copy_and_set_tags_via_tmp(ii, src, dst);
@@ -1237,9 +1237,7 @@ fn initials(authors: &str) -> String {
             }
         }
 
-        if v[0].chars().next().unwrap().is_lowercase()
-            && NOBILIARY_PARTICLES.iter().any(|&x| name == x)
-        {
+        if v[0].chars().next().unwrap().is_lowercase() && NOBILIARY_PARTICLES.contains(&name) {
             return v[0].to_string();
         }
 
