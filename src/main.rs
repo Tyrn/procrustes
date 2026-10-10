@@ -7,7 +7,7 @@ use crate::spinner::Spinner;
 
 use alphanumeric_sort::sort_path_slice;
 use chrono::{DateTime, Utc};
-use clap::{Arg, ArgMatches, Command};
+use clap::{parser::ValueSource, Arg, ArgAction, ArgMatches, Command};
 use itertools::join;
 use itertools::zip_eq;
 use regex::Regex;
@@ -46,7 +46,7 @@ const ODELIM_ICON: &str = "\u{01f538}";
 const RSUSP_ICON: &str = "\u{002753}";
 const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
-const COLUMN_ICON: &str = "\u{002714}";
+const COLUMN_ICON: &str = "\u{002b51}";
 const LINK_ICON: &str = "\u{0026a1}";
 const START_ICON: &str = "\u{01f4a3}";
 const STOP_ICON: &str = "\u{01f4a5}";
@@ -89,24 +89,15 @@ lazy_static! {
 /// on the command line.
 ///
 fn flag(name: &str) -> bool {
-    ARGS.occurrences_of(name) > 0
+    matches!(ARGS.value_source(name), Some(ValueSource::CommandLine))
 }
 
 /// Returns the string value, associated with the [name] option.
 /// Defined, if flag(name) is true.
-///
-fn sval(name: &str) -> &str {
-    ARGS.value_of(name).unwrap_or("NULL_STR")
-}
-
-/// Returns the integer value, associated with the [name] option.
-/// Defined, if flag(name) is true.
-///
-fn ival(name: &str) -> i64 {
-    ARGS.value_of(name)
-        .unwrap_or("NULL_INT")
-        .parse()
-        .expect("Option value must be a valid number!")
+fn sval(name: &str) -> &'static str {
+    ARGS.get_one::<String>(name)
+        .map(|s| s.as_str())
+        .unwrap_or("NULL_STR")
 }
 
 /// Returns the PathBuf value, associated with the [name] option.
@@ -135,79 +126,92 @@ fn args_retrieve() -> ArgMatches {
             Arg::new("v")
                 .short('v')
                 .long("verbose")
-                .help(&*format!("{} Verbose output", USE_ICON))
+                .help(format!("{} Verbose output", USE_ICON))
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("d")
                 .short('d')
                 .long("drop-tracknumber")
-                .help("Do not set track numbers"),
+                .help("Do not set track numbers")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("s")
                 .short('s')
                 .long("strip-decorations")
-                .help("Strip file and directory name decorations"),
+                .help("Strip file and directory name decorations")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("f")
                 .short('f')
                 .long("file-title")
-                .help("Use file name for title tag"),
+                .help("Use file name for title tag")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("F")
                 .short('F')
                 .long("file-title-num")
-                .help("Use numbered file name for title tag"),
+                .help("Use numbered file name for title tag")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("x")
                 .short('x')
                 .long("sort-lex")
-                .help("Sort files lexicographically"),
+                .help("Sort files lexicographically")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("t")
                 .short('t')
                 .long("tree-dst")
-                .help("Retain the tree structure of the source album at destination"),
+                .help("Retain the tree structure of the source album at destination")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("p")
                 .short('p')
                 .long("drop-dst")
-                .help("Do not create destination directory"),
+                .help("Do not create destination directory")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("r")
                 .short('r')
                 .long("reverse")
-                .help("Copy files in reverse order (number one file is the last to be copied)"),
+                .help("Copy files in reverse order (number one file is the last to be copied)")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("i")
                 .short('i')
                 .long("prepend-subdir-name")
-                .help("Prepend current subdirectory name to a file name"),
+                .help("Prepend current subdirectory name to a file name")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("c")
                 .short('c')
                 .long("count")
-                .help("Just count the files"),
+                .help("Just count the files")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("w")
                 .short('w')
                 .long("overwrite")
-                .help("Silently remove existing destination directory (not recommended)"),
+                .help("Silently remove existing destination directory (not recommended)")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("y")
                 .short('y')
                 .long("dry-run")
-                .help("Without actually copying the files (trumps -w, too)"),
+                .help("Without actually copying the files (trumps -w, too)")
+                .action(ArgAction::SetTrue)
         )
         .arg(
             Arg::new("e")
@@ -215,15 +219,15 @@ fn args_retrieve() -> ArgMatches {
                 .long("file-type")
                 .value_name("EXT")
                 .help("Accept only audio files of the specified type (e.g. -e ogg, or even -e '*kb.mp3')")
-                .takes_value(true),
+                .action(ArgAction::Set)
         )
         .arg(
             Arg::new("u")
                 .short('u')
                 .long("unified-name")
                 .value_name("UNAME")
-                .help(&*format!("{} UNAME for everything unspecified", USE_ICON))
-                .takes_value(true),
+                .help(format!("{} UNAME for everything unspecified", USE_ICON))
+                .action(ArgAction::Set)
         )
         .arg(
             Arg::new("b")
@@ -231,23 +235,24 @@ fn args_retrieve() -> ArgMatches {
                 .long("album-num")
                 .value_name("ALBUM_NUM")
                 .help("0..99; prepend ALBUM_NUM to the destination root directory name")
-                .takes_value(true),
+                .value_parser(clap::value_parser!(i64))
+                .action(ArgAction::Set)
         )
         .arg(
             Arg::new("a")
                 .short('a')
                 .long("artist")
                 .value_name("ARTIST")
-                .help(&*format!("{} Artist tag", USE_ICON))
-                .takes_value(true),
+                .help(format!("{} Artist tag", USE_ICON))
+                .action(ArgAction::Set)
         )
         .arg(
             Arg::new("m")
                 .short('m')
                 .long("album")
                 .value_name("ALBUM")
-                .help(&*format!("{} Album tag", USE_ICON))
-                .takes_value(true),
+                .help(format!("{} Album tag", USE_ICON))
+                .action(ArgAction::Set)
         )
         .arg(
             Arg::new("src")
@@ -567,8 +572,8 @@ fn artist_part(forw_dash: bool) -> String {
 /// The destination directory is calculated, not created here.
 ///
 fn dst_calculate() -> PathBuf {
-    let prefix = if flag("b") {
-        format!("{:02}-", ival("b"))
+    let prefix = if let Some(n) = ARGS.get_one::<i64>("b") {
+        format!("{:02}-", n)
     } else {
         "".to_string()
     };
