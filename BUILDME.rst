@@ -12,7 +12,7 @@ Development
 
 ::
 
-    $ yay -S taglib1
+    $ yay -S taglib
 
 - Ubuntu/Debian:
 
