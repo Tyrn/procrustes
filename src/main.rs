@@ -1141,27 +1141,31 @@ fn is_pattern_ok(path: &Path) -> bool {
         (*PATTERN).matches(path.file_name().unwrap().to_str().unwrap())
     }
 
-    lazy_static! {
-        static ref EXT: String = if flag("e") {
+    static EXT: LazyLock<String> = LazyLock::new(|| {
+        if flag("e") {
             sval("e").to_string()
         } else {
             "".to_string()
-        };
-        static ref PATTERN: glob::Pattern = if is_regex() {
+        }
+    });
+    static PATTERN: LazyLock<glob::Pattern> = LazyLock::new(|| {
+        if is_regex() {
             glob::Pattern::new(sval("e")).unwrap()
         } else {
             glob::Pattern::new("*").unwrap()
-        };
-        static ref IS_PATTERN_OK: fn(&Path) -> bool = if is_regex() {
+        }
+    });
+    static IS_PATTERN_OK: LazyLock<fn(&Path) -> bool> = LazyLock::new(|| {
+        if is_regex() {
             is_pattern_matching
         } else if flag("e") {
             is_ext_matching
         } else {
             always_true
-        };
-    }
+        }
+    });
 
-    IS_PATTERN_OK(path)
+    (*IS_PATTERN_OK)(path)
 }
 
 /// Returns true, if [path] has an audio file extension, otherwise false.
@@ -1197,9 +1201,7 @@ fn has_ext_of(path: &str, ext: &str) -> bool {
 /// Returns a vector of integer numbers, embedded in [s].
 ///
 fn str_strip_numbers(s: &str) -> Vec<i64> {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"\d+").unwrap();
-    }
+    static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\d+").unwrap());
     // iterate over all matches
     RE.find_iter(s)
         .filter_map(|digits| digits.as_str().parse().ok()) // Filter out numbers out of ixx range.
@@ -1210,16 +1212,15 @@ fn str_strip_numbers(s: &str) -> Vec<i64> {
 /// [authors] being a comma-separated list of full names.
 ///
 fn initials(authors: &str) -> String {
-    lazy_static! {
-        static ref SPACE: Regex = Regex::new(r"[\s.]+").unwrap();
-        static ref NICKNAME: Regex = Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap();
-        static ref NOBILIARY_PARTICLES: [&'static str; 43] = [
-            "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "zum", "цум",
-            "zur", "цур", "af", "аф", "of", "из", "da", "да", "de", "де", "des", "дез", "del",
-            "дель", "den", "ден", "di", "ди", "dos", "душ", "дос", "du", "дю", "la", "ла", "ля",
-            "le", "ле", "haut", "от", "the",
-        ];
-    }
+    static SPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[\s.]+").unwrap());
+    static NICKNAME: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r#""(?:\\.|[^"\\])*""#).unwrap());
+    static NOBILIARY_PARTICLES: [&str; 47] = [
+        "von", "фон", "van", "ван", "der", "дер", "til", "тиль", "zu", "цу", "zum", "цум", "zur",
+        "цур", "af", "аф", "of", "из", "da", "да", "de", "де", "des", "дез", "del", "дель", "den",
+        "ден", "di", "ди", "dos", "душ", "дос", "du", "дю", "la", "ла", "ля", "le", "ле", "las",
+        "лас", "los", "лос", "haut", "от", "the",
+    ];
 
     fn gv(s: &str) -> Vec<&str> {
         UnicodeSegmentation::graphemes(s, true).collect()
