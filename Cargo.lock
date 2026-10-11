@@ -626,7 +626,6 @@ dependencies = [
  "gag",
  "glob",
  "itertools",
- "lazy_static",
  "regex",
  "spinner",
  "spinners",

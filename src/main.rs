@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 mod spinner;
 use crate::spinner as spin;
 use crate::spinner::Spinner;
@@ -332,12 +329,13 @@ fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     }
     fn reverse_nop(_dirs: &mut [PathBuf], _files: &mut [PathBuf]) {}
 
-    lazy_static! {
-        static ref SORT: fn(&mut [PathBuf], &mut [PathBuf]) =
-            if flag("x") { sort_lex } else { sort_naturally };
-        static ref REVERSE: fn(&mut [PathBuf], &mut [PathBuf]) =
-            if flag("r") { reverse } else { reverse_nop };
-    }
+    type Sort = fn(&mut [PathBuf], &mut [PathBuf]);
+    type Reverse = fn(&mut [PathBuf], &mut [PathBuf]);
+
+    static SORT: LazyLock<Sort> =
+        LazyLock::new(|| if flag("x") { sort_lex } else { sort_naturally });
+    static REVERSE: LazyLock<Reverse> =
+        LazyLock::new(|| if flag("r") { reverse } else { reverse_nop });
 
     if dir.is_file() && is_audiofile(dir) {
         return (vec![], vec![dir.to_path_buf()]);
@@ -389,13 +387,13 @@ fn dir_walk(dir: &Path, step_down: Vec<PathBuf>) -> WalkIterator {
     type WalkStreamFn =
         fn(Vec<PathBuf>, Vec<PathBuf>, Box<WalkStepDownFn>, Box<WalkMakeItemFn>) -> WalkIterator;
 
-    lazy_static! {
-        static ref STREAM_FILES: WalkStreamFn = if flag("r") {
+    static STREAM_FILES: LazyLock<WalkStreamFn> = LazyLock::new(|| {
+        if flag("r") {
             stream_backward
         } else {
             stream_forward
-        };
-    }
+        }
+    });
 
     let (dirs, files) = dir_groom(dir);
     let step = step_down.clone();
@@ -464,13 +462,19 @@ fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
     }
     fn tag_nop_all(_tag: &mut taglib::Tag, _ii: u64, _src: &Path) {}
 
-    lazy_static! {
-        static ref INITIALS: String = if *IS_ARTIST {
+    type TitleCompose = fn(u64, &Path) -> String;
+    type TagSetTrackNumber = fn(&mut taglib::Tag, u64);
+    type TagSetTheRest = fn(&mut taglib::Tag, u64, &Path);
+
+    static INITIALS: LazyLock<String> = LazyLock::new(|| {
+        if *IS_ARTIST {
             initials(&ARTIST)
         } else {
             "".to_string()
-        };
-        static ref TITLE_TAIL: String = if *IS_ARTIST && *IS_ALBUM {
+        }
+    });
+    static TITLE_TAIL: LazyLock<String> = LazyLock::new(|| {
+        if *IS_ARTIST && *IS_ALBUM {
             format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
         } else if *IS_ARTIST {
             ARTIST.to_string()
@@ -478,20 +482,26 @@ fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
             ALBUM.to_string()
         } else {
             "".to_string()
-        };
-        static ref TITLE_COMPOSE: fn(u64, &Path) -> String = if flag("F") {
+        }
+    });
+    static TITLE_COMPOSE: LazyLock<TitleCompose> = LazyLock::new(|| {
+        if flag("F") {
             title_fi
         } else if flag("f") {
             title_f
         } else {
             title_i
-        };
-        static ref TAG_SET_TRACK_NUMBER: fn(&mut taglib::Tag, u64) = if flag("d") {
+        }
+    });
+    static TAG_SET_TRACK_NUMBER: LazyLock<TagSetTrackNumber> = LazyLock::new(|| {
+        if flag("d") {
             tag_nop_track_number
         } else {
             tag_set_track_number
-        };
-        static ref TAG_SET_THE_REST: fn(&mut taglib::Tag, u64, &Path) = if *IS_ARTIST && *IS_ALBUM {
+        }
+    });
+    static TAG_SET_THE_REST: LazyLock<TagSetTheRest> = LazyLock::new(|| {
+        if *IS_ARTIST && *IS_ALBUM {
             tag_set_artist_album
         } else if *IS_ARTIST {
             tag_set_artist
@@ -499,8 +509,8 @@ fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
             tag_set_album
         } else {
             tag_nop_all
-        };
-    }
+        }
+    });
 
     let tag_file = taglib::File::new(dst).unwrap_or_else(|_| {
         panic!(
@@ -702,21 +712,25 @@ fn track_decorate(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBu
         PathBuf::from(src.file_name().unwrap())
     }
 
-    lazy_static! {
-        static ref PREFIX_MAKE: fn(u64, &[PathBuf], usize) -> String = if flag("i") && !flag("t") {
+    type PrefixMake = fn(u64, &[PathBuf], usize) -> String;
+    type Decorate = fn(u64, &Path, &[PathBuf], usize) -> PathBuf;
+
+    static PREFIX_MAKE: LazyLock<PrefixMake> = LazyLock::new(|| {
+        if flag("i") && !flag("t") {
             prefix_subdir_make
         } else {
             prefix_make
-        };
-        static ref DECORATE: fn(u64, &Path, &[PathBuf], usize) -> PathBuf =
-            if flag("s") && flag("t") {
-                decorate_nop
-            } else if *IS_UNIFIED {
-                decorate_unified
-            } else {
-                decorate
-            };
-    }
+        }
+    });
+    static DECORATE: LazyLock<Decorate> = LazyLock::new(|| {
+        if flag("s") && flag("t") {
+            decorate_nop
+        } else if *IS_UNIFIED {
+            decorate_unified
+        } else {
+            decorate
+        }
+    });
 
     DECORATE(ii, src, step, width)
 }
@@ -811,28 +825,39 @@ fn track_copy(
         io::stdout().flush().unwrap();
     }
 
-    lazy_static! {
-        static ref STEP_COLLECT: fn(&[PathBuf]) -> PathBuf = if flag("t") {
+    type StepCollect = fn(&[PathBuf]) -> PathBuf;
+    type StepCreateDir = fn(&Path, &Path);
+    type FileCopyTags = fn(u64, &Path, &Path, &mut Vec<String>) -> u64;
+    type OutTrack = fn(u64, usize, u64, &str, u64, u64);
+
+    static STEP_COLLECT: LazyLock<StepCollect> = LazyLock::new(|| {
+        if flag("t") {
             step_collect
         } else {
             step_flat_collect
-        };
-        static ref STEP_CREATE_DIR: fn(&Path, &Path) = if flag("t") && !flag("y") {
+        }
+    });
+    static STEP_CREATE_DIR: LazyLock<StepCreateDir> = LazyLock::new(|| {
+        if flag("t") && !flag("y") {
             step_create_dir
         } else {
             step_nop_create_dir
-        };
-        static ref FILE_COPYTAGS: fn(u64, &Path, &Path, &mut Vec<String>) -> u64 = if flag("y") {
+        }
+    });
+    static FILE_COPYTAGS: LazyLock<FileCopyTags> = LazyLock::new(|| {
+        if flag("y") {
             file_nop_copytags
         } else {
             file_copytags
-        };
-        static ref OUT_TRACK: fn(u64, usize, u64, &str, u64, u64) = if flag("v") {
+        }
+    });
+    static OUT_TRACK: LazyLock<OutTrack> = LazyLock::new(|| {
+        if flag("v") {
             out_track_verbose
         } else {
             out_track_terse
-        };
-    }
+        }
+    });
 
     let stride: PathBuf = STEP_COLLECT(step);
     STEP_CREATE_DIR(dst, &stride);
@@ -888,16 +913,25 @@ fn album_copy(
         Box::new((1_u64..=range).rev())
     }
 
-    lazy_static! {
-        static ref OUT_START: fn() = if flag("v") { out_nop } else { out_start_terse };
-        static ref OUT_TAIL: fn() = if flag("v") { out_nop } else { out_tail_terse };
-        static ref OUT_DONE: fn(u64, u64, f64) = out_done;
-        static ref RANGE: fn(u64) -> Box<dyn Iterator<Item = u64>> = if flag("r") {
+    static OUT_START: LazyLock<fn()> =
+        LazyLock::new(|| if flag("v") { out_nop } else { out_start_terse });
+    static OUT_TAIL: LazyLock<fn()> =
+        LazyLock::new(|| if flag("v") { out_nop } else { out_tail_terse });
+    static OUT_DONE: LazyLock<fn(u64, u64, f64)> = LazyLock::new(|| out_done);
+
+    /// Iterator over track indices.
+    type TrackIter = Box<dyn Iterator<Item = u64>>;
+
+    /// A function producing an iterator of track indices from a count.
+    type RangeFn = fn(u64) -> TrackIter;
+
+    static RANGE: LazyLock<RangeFn> = LazyLock::new(|| {
+        if flag("r") {
             tracks_range_rev
         } else {
             tracks_range
-        };
-    }
+        }
+    });
 
     if tracks_total < 1 {
         println!(
@@ -1006,13 +1040,6 @@ fn tracks_count(
 
 fn main() {
     LazyLock::force(&ARGS);
-    LazyLock::force(&DST_DIR);
-    LazyLock::force(&IS_ARTIST);
-    LazyLock::force(&IS_UNIFIED);
-    LazyLock::force(&UNIFIED);
-    LazyLock::force(&IS_ALBUM);
-    LazyLock::force(&ARTIST);
-    LazyLock::force(&ALBUM);
     // let _ = *ARGS; // This magic works just as nice.
 
     let mut log: Vec<String> = Vec::new();
