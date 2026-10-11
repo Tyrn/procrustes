@@ -23,7 +23,8 @@ use std::{
 use tempfile::TempDir;
 use unicode_segmentation::UnicodeSegmentation;
 
-const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
+const APP_DESCRIPTION: &str = const_format::concatcp!(
+    "Procrustes a.k.a. Damastes \
     is a CLI utility for copying directories and subdirectories \
     containing supported audio files in sequence, naturally sorted. \
     The end result is a \"flattened\" copy of the source subtree. \"Flattened\" means \
@@ -31,13 +32,19 @@ const APP_DESCRIPTION: &str = "Procrustes a.k.a. Damastes \
     copied to, names prefixed with a serial number. Tag \"Track Number\" \
     is set, tags \"Title\", \"Artist\", and \"Album\" can be replaced optionally. \
     The writing process is strictly sequential: either starting with the number one file, \
-    or in the reverse order. This can be important for some mobile devices. \
-    \u{002b50} Really useful options. \u{002754} Suspicious media. \
+    or in the reverse order. This can be important for some mobile devices. ",
+    USE_ICON,
+    " Really, ",
+    PRAISE_ICON,
+    " really useful options. ",
+    SUSPICIOUS_ICON,
+    " Suspicious media. \
     \n\nExamples; <src> as a directory: \
     \n\nrobinson-crusoe $ procrustes -va 'Daniel \"Goldeneye\" Defoe' -m 'Robinson Crusoe' . \
     /run/media/player \
     \n\n<src> as a single file: \
-    \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg .";
+    \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg ."
+);
 
 const INVALID_ICON: &str = "\u{00274c}";
 const WARNING_ICON: &str = "\u{01f4a7}";
@@ -51,6 +58,7 @@ const LINK_ICON: &str = "\u{0026a1}";
 const START_ICON: &str = "\u{01f4a3}";
 const STOP_ICON: &str = "\u{01f4a5}";
 const USE_ICON: &str = "\u{002b50}";
+const PRAISE_ICON: &str = "\u{01f341}";
 
 lazy_static! {
     static ref ARGS: ArgMatches = args_retrieve();
@@ -226,7 +234,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('u')
                 .long("unified-name")
                 .value_name("UNAME")
-                .help(format!("{} UNAME for everything unspecified", USE_ICON))
+                .help(format!("{}{} UNAME for everything unspecified", USE_ICON, PRAISE_ICON))
                 .action(ArgAction::Set)
         )
         .arg(
@@ -243,7 +251,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('a')
                 .long("artist")
                 .value_name("ARTIST")
-                .help(format!("{} Artist tag", USE_ICON))
+                .help(format!("{}{} Artist tag", USE_ICON, PRAISE_ICON))
                 .action(ArgAction::Set)
         )
         .arg(
