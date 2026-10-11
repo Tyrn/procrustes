@@ -8,13 +8,14 @@ use clap::{parser::ValueSource, Arg, ArgAction, ArgMatches, Command};
 use const_format::{concatcp, formatcp};
 use itertools::join;
 use itertools::zip_eq;
+use owo_colors::OwoColorize;
 use regex::Regex;
 use std::{
     cmp, env,
     ffi::OsStr,
     fs, io,
     io::Write,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     process::exit,
     sync::LazyLock,
     time::Instant,
@@ -794,13 +795,19 @@ fn track_copy(
         ii: u64,
         width: usize,
         tracks_total: u64,
-        path: &str,
+        path: &Path,
         dst_bytes: u64,
         src_bytes: u64,
     ) {
         print!(
             "{:1$}/{2} {3} {4}",
-            ii, width, tracks_total, COLUMN_ICON, path,
+            ii,
+            width,
+            tracks_total,
+            COLUMN_ICON,
+            path.strip_prefix(DST_DIR.as_path())
+                .unwrap_or(path)
+                .display()
         );
         if dst_bytes != src_bytes {
             if dst_bytes == 0 {
@@ -817,7 +824,7 @@ fn track_copy(
         _ii: u64,
         _width: usize,
         _tracks_total: u64,
-        _path: &str,
+        _path: &Path,
         _dst_bytes: u64,
         _src_bytes: u64,
     ) {
@@ -828,7 +835,7 @@ fn track_copy(
     type StepCollect = fn(&[PathBuf]) -> PathBuf;
     type StepCreateDir = fn(&Path, &Path);
     type FileCopyTags = fn(u64, &Path, &Path, &mut Vec<String>) -> u64;
-    type OutTrack = fn(u64, usize, u64, &str, u64, u64);
+    type OutTrack = fn(u64, usize, u64, &Path, u64, u64);
 
     static STEP_COLLECT: LazyLock<StepCollect> = LazyLock::new(|| {
         if flag("t") {
@@ -869,7 +876,7 @@ fn track_copy(
         ii,
         width,
         tracks_total,
-        dst_file.to_str().unwrap(),
+        &dst_file,
         FILE_COPYTAGS(ii, src_file, &dst_file, log),
         src_file.metadata().unwrap().len(),
     );
@@ -886,14 +893,23 @@ fn album_copy(
     bytes_total: u64,
     log: &mut Vec<String>,
 ) {
+    fn show_dst() {
+        let s = format!("{}{}", DST_DIR.display(), MAIN_SEPARATOR_STR);
+        print!(" >> {} >>\n", s.cyan());
+    }
+
     fn out_start_terse() {
+        show_dst();
         print!(" {} ", START_ICON);
         io::stdout().flush().unwrap();
     }
-    fn out_nop() {}
+    fn out_nop() {
+        show_dst();
+    }
 
     fn out_tail_terse() {
         println!(" {}", STOP_ICON);
+        show_dst();
     }
 
     fn out_done(tracks_total: u64, bytes_total: u64, time_elapsed: f64) {
