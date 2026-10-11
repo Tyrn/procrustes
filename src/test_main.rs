@@ -157,6 +157,7 @@ fn test_initials() {
         initials("mario Del monaco, Hutchinson of London"),
         "M.D.M.,H.o.L."
     );
+    assert_eq!(initials("Bartolomé de las casas"), "B.d.l.C.");
     assert_eq!(initials("melroy van den berg"), "M.v.d.B.");
     assert_eq!(initials("мелрой ван ден берг"), "М.в.д.Б.");
     assert_eq!(initials("Anselm haut Rodric"), "A.h.R.");
