@@ -8,6 +8,7 @@ use crate::spinner::Spinner;
 use alphanumeric_sort::sort_path_slice;
 use chrono::{DateTime, Utc};
 use clap::{parser::ValueSource, Arg, ArgAction, ArgMatches, Command};
+use const_format::{concatcp, formatcp};
 use itertools::join;
 use itertools::zip_eq;
 use regex::Regex;
@@ -23,7 +24,7 @@ use std::{
 use tempfile::TempDir;
 use unicode_segmentation::UnicodeSegmentation;
 
-const APP_DESCRIPTION: &str = const_format::concatcp!(
+const APP_DESCRIPTION: &str = concatcp!(
     "Procrustes a.k.a. Damastes \
     is a CLI utility for copying directories and subdirectories \
     containing supported audio files in sequence, naturally sorted. \
@@ -134,7 +135,7 @@ fn args_retrieve() -> ArgMatches {
             Arg::new("v")
                 .short('v')
                 .long("verbose")
-                .help(format!("{} Verbose output", USE_ICON))
+                .help(formatcp!("{USE_ICON} Verbose output"))
                 .action(ArgAction::SetTrue)
         )
         .arg(
@@ -234,7 +235,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('u')
                 .long("unified-name")
                 .value_name("UNAME")
-                .help(format!("{}{} UNAME for everything unspecified", USE_ICON, PRAISE_ICON))
+                .help(formatcp!("{USE_ICON}{PRAISE_ICON} UNAME for everything unspecified"))
                 .action(ArgAction::Set)
         )
         .arg(
@@ -251,7 +252,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('a')
                 .long("artist")
                 .value_name("ARTIST")
-                .help(format!("{}{} Artist tag", USE_ICON, PRAISE_ICON))
+                .help(formatcp!("{USE_ICON}{PRAISE_ICON} Artist tag"))
                 .action(ArgAction::Set)
         )
         .arg(
@@ -259,7 +260,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('m')
                 .long("album")
                 .value_name("ALBUM")
-                .help(format!("{} Album tag", USE_ICON))
+                .help(formatcp!("{USE_ICON} Album tag"))
                 .action(ArgAction::Set)
         )
         .arg(
