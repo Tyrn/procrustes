@@ -896,7 +896,7 @@ fn album_copy(
 ) {
     fn show_dst() {
         let s = format!("{}{}", DST_DIR.display(), MAIN_SEPARATOR_STR);
-        print!(" >> {} >>\n", s.cyan());
+        println!(" >> {} >>", s.cyan());
     }
 
     fn out_start_terse() {

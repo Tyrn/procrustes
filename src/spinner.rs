@@ -1,6 +1,5 @@
 use crate::{str_shrink, BDELIM_ICON};
 use spinner as daddy;
-use spinners as pretty;
 use std::time::Duration;
 use terminal_spinners as cute;
 
@@ -70,35 +69,6 @@ impl Spinner for DaddySpinner {
     fn stop(&mut self) {
         if let Some(spinner) = self.spinner.take() {
             spinner.close();
-        }
-        println!();
-    }
-}
-
-pub struct PrettySpinner {
-    spinner: Option<pretty::Spinner>,
-}
-
-#[allow(dead_code)]
-impl PrettySpinner {
-    pub fn new() -> Self {
-        Self {
-            spinner: Some(pretty::Spinner::new(&pretty::Spinners::Moon, "".into())),
-        }
-    }
-}
-
-impl Spinner for PrettySpinner {
-    fn message(&self, line: String) {
-        match &self.spinner {
-            Some(spinner) => spinner.message(line.shrink_pretty()),
-            _ => panic!("{}", self.adieu("PrettySpinner")),
-        };
-    }
-
-    fn stop(&mut self) {
-        if let Some(spinner) = self.spinner.take() {
-            spinner.stop();
         }
         println!();
     }
