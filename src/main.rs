@@ -101,6 +101,15 @@ fn flag(name: &str) -> bool {
     matches!(ARGS.value_source(name), Some(ValueSource::CommandLine))
 }
 
+/// Returns the -v option count.
+///
+fn verbose_level() -> u8 {
+    match ARGS.value_source("v") {
+        Some(ValueSource::CommandLine) => ARGS.get_count("v"),
+        _ => 0,
+    }
+}
+
 /// Returns the string value, associated with the [name] option.
 /// Defined, if flag(name) is true.
 fn sval(name: &str) -> &'static str {
@@ -136,7 +145,7 @@ fn args_retrieve() -> ArgMatches {
                 .short('v')
                 .long("verbose")
                 .help(formatcp!("{USE_ICON} Verbose output"))
-                .action(ArgAction::SetTrue)
+                .action(ArgAction::Count)
         )
         .arg(
             Arg::new("d")
@@ -413,7 +422,7 @@ fn file_copy(src: &Path, dst: &Path) {
 /// composition.
 ///
 fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
-    let _silence = gag::Gag::stderr().unwrap();
+    let _silence = (verbose_level() < 2).then(|| gag::Gag::stderr().unwrap());
     fn title_fi(ii: u64, src: &Path) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
@@ -1167,7 +1176,7 @@ fn is_audiofile_ext(path: &Path) -> bool {
 /// Returns true, if [path] is a valid audio file, otherwise false.
 ///
 fn is_audiofile(path: &Path) -> bool {
-    let _silence = gag::Gag::stderr().unwrap();
+    let _silence = (verbose_level() < 2).then(|| gag::Gag::stderr().unwrap());
 
     if is_pattern_ok(path) {
         match taglib::File::new(path) {
