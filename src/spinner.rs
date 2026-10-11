@@ -1,6 +1,7 @@
 use crate::{str_shrink, BDELIM_ICON};
 use spinach::{Color, RunningSpinner, Spinner as SpinachSpinner};
 use spinner as daddy;
+use std::cell::Cell;
 use std::time::Duration;
 use terminal_spinners as cute;
 
@@ -42,37 +43,42 @@ pub trait Spinner {
 }
 
 pub struct PrettySpinner {
-    // Use the crate's type alias, no generics needed
     spinner: Option<RunningSpinner>,
+    count: Cell<u64>,
 }
 
 #[allow(dead_code)]
 impl PrettySpinner {
     pub fn new() -> Self {
         Self {
-            spinner: Some(SpinachSpinner::new("").color(Color::Magenta).start()),
+            spinner: Some(
+                SpinachSpinner::new("")
+                    .symbols(MOON.to_vec())
+                    .color(Color::Ignore)
+                    .start(),
+            ),
+            count: Cell::new(0),
         }
     }
 }
 
 impl Spinner for PrettySpinner {
-    // Assuming your own `Spinner` trait
     fn message(&self, line: String) {
-        match &self.spinner {
-            Some(spinner) => {
-                // Fix: Pass a &str to text() by borrowing the String
-                spinner.text(&line.shrink_pretty()).update();
-            }
-            _ => panic!("{}", self.adieu("PrettySpinner")),
+        let n = self.count.get() + 1;
+        self.count.set(n);
+        if n.is_multiple_of(50) {
+            match &self.spinner {
+                Some(spinner) => spinner.text(&line.shrink_pretty()).update(),
+                _ => panic!("{}", self.adieu("PrettySpinner")),
+            };
         }
     }
 
     fn stop(&mut self) {
         if let Some(spinner) = self.spinner.take() {
-            // Use the `stop()` method to freeze the spinner
             spinner.stop();
         }
-        println!();
+        //println!();
     }
 }
 pub struct DaddySpinner {

@@ -1063,7 +1063,7 @@ fn main() {
     let (mut src_check_log, src) = src_check();
 
     let now = Instant::now();
-    let mut spinner = spin::DaddySpinner::new();
+    let mut spinner = spin::PrettySpinner::new();
 
     let (suspicious_total, suspicious_bytes_total, tracks_total, bytes_total) =
         tracks_count(src.as_path(), &mut spinner, &mut log);
