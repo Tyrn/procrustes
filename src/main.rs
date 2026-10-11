@@ -800,11 +800,11 @@ fn track_copy(
         src_bytes: u64,
     ) {
         print!(
-            "{:1$}/{2} {3} {4}",
+            "{:1$}{2}{3}  {4}",
             ii,
             width,
-            tracks_total,
             COLUMN_ICON,
+            tracks_total,
             path.strip_prefix(DST_DIR.as_path())
                 .unwrap_or(path)
                 .display()
@@ -814,8 +814,9 @@ fn track_copy(
                 print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
             } else {
                 let growth = dst_bytes as i64 - src_bytes as i64;
+                let s = format!("{:+}", growth);
 
-                print!("  {} {:+}", COLUMN_ICON, growth);
+                print!("    {}", s.cyan());
             }
         }
         println!();
