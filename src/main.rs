@@ -62,29 +62,37 @@ const STOP_ICON: &str = "\u{01f4a5}";
 const USE_ICON: &str = "\u{002b50}";
 const PRAISE_ICON: &str = "\u{01f341}";
 
-lazy_static! {
-    static ref ARGS: ArgMatches = args_retrieve();
-    static ref DST_DIR: PathBuf = dst_calculate();
-    static ref KNOWN_EXTENSIONS: [&'static str; 9] =
-        ["MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",];
-    static ref IS_ARTIST: bool = flag("a");
-    static ref IS_UNIFIED: bool = flag("u");
-    static ref UNIFIED: String = if *IS_UNIFIED {
+static KNOWN_EXTENSIONS: [&str; 9] = [
+    "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",
+];
+
+static ARGS: LazyLock<ArgMatches> = LazyLock::new(args_retrieve);
+static DST_DIR: LazyLock<PathBuf> = LazyLock::new(dst_calculate);
+static IS_ARTIST: LazyLock<bool> = LazyLock::new(|| flag("a"));
+static IS_UNIFIED: LazyLock<bool> = LazyLock::new(|| flag("u"));
+static UNIFIED: LazyLock<String> = LazyLock::new(|| {
+    if *IS_UNIFIED {
         sval("u").to_string()
     } else {
         "".to_string()
-    };
-    static ref IS_ALBUM: bool = if *IS_UNIFIED && !flag("m") {
+    }
+});
+static IS_ALBUM: LazyLock<bool> = LazyLock::new(|| {
+    if *IS_UNIFIED && !flag("m") {
         true
     } else {
         flag("m")
-    };
-    static ref ARTIST: String = if *IS_ARTIST {
+    }
+});
+static ARTIST: LazyLock<String> = LazyLock::new(|| {
+    if *IS_ARTIST {
         sval("a").to_string()
     } else {
         "".to_string()
-    };
-    static ref ALBUM: String = if *IS_ALBUM {
+    }
+});
+static ALBUM: LazyLock<String> = LazyLock::new(|| {
+    if *IS_ALBUM {
         if *IS_UNIFIED && !flag("m") {
             UNIFIED.to_string()
         } else {
@@ -92,8 +100,8 @@ lazy_static! {
         }
     } else {
         "".to_string()
-    };
-}
+    }
+});
 
 /// Returns true, if the [name] option is present
 /// on the command line.
@@ -997,8 +1005,15 @@ fn tracks_count(
 }
 
 fn main() {
-    lazy_static::initialize(&ARGS); // Make sure arguments are handled at this point.
-                                    // let _ = *ARGS; // This magic works just as nice.
+    LazyLock::force(&ARGS);
+    LazyLock::force(&DST_DIR);
+    LazyLock::force(&IS_ARTIST);
+    LazyLock::force(&IS_UNIFIED);
+    LazyLock::force(&UNIFIED);
+    LazyLock::force(&IS_ALBUM);
+    LazyLock::force(&ARTIST);
+    LazyLock::force(&ALBUM);
+    // let _ = *ARGS; // This magic works just as nice.
 
     let mut log: Vec<String> = Vec::new();
     let (mut src_check_log, src) = src_check();
@@ -1062,16 +1077,14 @@ fn main() {
 /// Returns a human readable string representation of [bytes], nicely rounded.
 ///
 fn human_fine(bytes: u64) -> String {
-    lazy_static! {
-        static ref UNIT_LIST: [(&'static str, i32); 6] = [
-            ("", 0),
-            ("kB", 0),
-            ("MB", 1),
-            ("GB", 2),
-            ("TB", 2),
-            ("PB", 2),
-        ];
-    }
+    static UNIT_LIST: [(&str, i32); 6] = [
+        ("", 0),
+        ("kB", 0),
+        ("MB", 1),
+        ("GB", 2),
+        ("TB", 2),
+        ("PB", 2),
+    ];
     let fb = bytes as f64;
     if bytes > 1 {
         let exponent = cmp::min(fb.log(1024.0) as i32, UNIT_LIST.len() as i32 - 1);
