@@ -19,6 +19,7 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
     process::exit,
+    sync::LazyLock,
     time::Instant,
 };
 use tempfile::TempDir;
@@ -101,14 +102,12 @@ fn flag(name: &str) -> bool {
     matches!(ARGS.value_source(name), Some(ValueSource::CommandLine))
 }
 
-/// Returns the -v option count.
+/// Holds the -v option count.
 ///
-fn verbose_level() -> u8 {
-    match ARGS.value_source("v") {
-        Some(ValueSource::CommandLine) => ARGS.get_count("v"),
-        _ => 0,
-    }
-}
+static VERBOSE_LEVEL: LazyLock<u8> = LazyLock::new(|| match ARGS.value_source("v") {
+    Some(ValueSource::CommandLine) => ARGS.get_count("v"),
+    _ => 0,
+});
 
 /// Returns the string value, associated with the [name] option.
 /// Defined, if flag(name) is true.
@@ -422,7 +421,7 @@ fn file_copy(src: &Path, dst: &Path) {
 /// composition.
 ///
 fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
-    let _silence = (verbose_level() < 2).then(|| gag::Gag::stderr().unwrap());
+    let _silence = (*VERBOSE_LEVEL < 2).then(|| gag::Gag::stderr().unwrap());
     fn title_fi(ii: u64, src: &Path) -> String {
         let stem = &src.file_stem().unwrap().to_str().unwrap();
 
@@ -1176,7 +1175,7 @@ fn is_audiofile_ext(path: &Path) -> bool {
 /// Returns true, if [path] is a valid audio file, otherwise false.
 ///
 fn is_audiofile(path: &Path) -> bool {
-    let _silence = (verbose_level() < 2).then(|| gag::Gag::stderr().unwrap());
+    let _silence = (*VERBOSE_LEVEL < 2).then(|| gag::Gag::stderr().unwrap());
 
     if is_pattern_ok(path) {
         match taglib::File::new(path) {
