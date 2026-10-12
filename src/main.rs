@@ -811,7 +811,7 @@ fn track_copy(
         );
         if dst_bytes != src_bytes {
             if dst_bytes == 0 {
-                print!("  {} {}", COLUMN_ICON, human_fine(src_bytes));
+                print!("    {}", human_fine(src_bytes).cyan()); // Dry run
             } else {
                 let growth = dst_bytes as i64 - src_bytes as i64;
                 let s = format!("{:+}", growth);
