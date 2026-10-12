@@ -66,7 +66,7 @@ impl Spinner for PrettySpinner {
     fn message(&self, line: String) {
         let n = self.count.get() + 1;
         self.count.set(n);
-        if n.is_multiple_of(50) {
+        if n == 1 || n.is_multiple_of(50) {
             match &self.spinner {
                 Some(spinner) => spinner.text(&line.shrink_pretty()).update(),
                 _ => panic!("{}", self.adieu("PrettySpinner")),
@@ -76,9 +76,9 @@ impl Spinner for PrettySpinner {
 
     fn stop(&mut self) {
         if let Some(spinner) = self.spinner.take() {
-            spinner.stop();
+            // spinner.stop();
+            spinner.symbols(vec!["\u{00A0}🏅"]).stop();
         }
-        //println!();
     }
 }
 pub struct DaddySpinner {
