@@ -681,44 +681,44 @@ fn dst_create() -> PathBuf {
 /// Extracts file name from the [src] track (number [ii])
 /// and makes it pretty, if necessary.
 ///
-fn track_decorate(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBuf {
-    fn prefix_subdir_make(ii: u64, step: &[PathBuf], width: usize) -> String {
+fn track_decorate(ii: u64, src: &Path, step: &[PathBuf]) -> PathBuf {
+    fn prefix_subdir_make(ii: u64, step: &[PathBuf]) -> String {
         if !step.is_empty() {
             format!(
                 "{:01$}-[{2}]",
                 ii,
-                width,
+                ctx().width,
                 join(step.iter().map(|p| p.to_str().unwrap()), "][")
             )
         } else {
-            format!("{:01$}", ii, width)
+            format!("{:01$}", ii, ctx().width)
         }
     }
-    fn prefix_make(ii: u64, _step: &[PathBuf], width: usize) -> String {
-        format!("{:01$}", ii, width)
+    fn prefix_make(ii: u64, _step: &[PathBuf]) -> String {
+        format!("{:01$}", ii, ctx().width)
     }
-    fn decorate_unified(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBuf {
+    fn decorate_unified(ii: u64, src: &Path, step: &[PathBuf]) -> PathBuf {
         PathBuf::from(format!(
             "{}-{}{}.{}",
-            PREFIX_MAKE(ii, step, width),
+            PREFIX_MAKE(ii, step),
             *UNIFIED,
             artist_part(true),
             src.extension().unwrap().to_str().unwrap()
         ))
     }
-    fn decorate(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBuf {
+    fn decorate(ii: u64, src: &Path, step: &[PathBuf]) -> PathBuf {
         PathBuf::from(format!(
             "{}-{}",
-            PREFIX_MAKE(ii, step, width),
+            PREFIX_MAKE(ii, step),
             src.file_name().unwrap().to_str().unwrap()
         ))
     }
-    fn decorate_nop(_ii: u64, src: &Path, _step: &[PathBuf], _width: usize) -> PathBuf {
+    fn decorate_nop(_ii: u64, src: &Path, _step: &[PathBuf]) -> PathBuf {
         PathBuf::from(src.file_name().unwrap())
     }
 
-    type PrefixMake = fn(u64, &[PathBuf], usize) -> String;
-    type Decorate = fn(u64, &Path, &[PathBuf], usize) -> PathBuf;
+    type PrefixMake = fn(u64, &[PathBuf]) -> String;
+    type Decorate = fn(u64, &Path, &[PathBuf]) -> PathBuf;
 
     static PREFIX_MAKE: LazyLock<PrefixMake> = LazyLock::new(|| {
         if flag("i") && !flag("t") {
@@ -737,7 +737,7 @@ fn track_decorate(ii: u64, src: &Path, step: &[PathBuf], width: usize) -> PathBu
         }
     });
 
-    DECORATE(ii, src, step, width)
+    DECORATE(ii, src, step)
 }
 
 /// Calculates destination, complete with the file name,
@@ -859,7 +859,7 @@ fn track_copy(
     let dst_file = &ctx()
         .dst
         .join(&stride)
-        .join(track_decorate(ii, src_file, step, ctx().width));
+        .join(track_decorate(ii, src_file, step));
 
     OUT_TRACK(
         ii,
