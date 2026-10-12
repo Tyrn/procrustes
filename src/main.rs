@@ -863,8 +863,8 @@ fn track_copy(
 
     OUT_TRACK(
         ii,
-        &dst_file,
-        FILE_COPYTAGS(ii, src_file, &dst_file, log),
+        dst_file,
+        FILE_COPYTAGS(ii, src_file, dst_file, log),
         src_file.metadata().unwrap().len(),
     );
 }
