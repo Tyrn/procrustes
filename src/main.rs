@@ -54,7 +54,7 @@ const RSUSP_ICON: &str = "\u{002753}";
 const SUSPICIOUS_ICON: &str = "\u{002754}";
 const DONE_ICON: &str = "\u{01f7e2}";
 const COLUMN_ICON: &str = "\u{002b51}";
-const LINK_ICON: &str = "\u{0026a1}";
+const LINK_ICON: &str = "\u{002026}";
 const START_ICON: &str = "\u{01f4a3}";
 const STOP_ICON: &str = "\u{01f4a5}";
 const USE_ICON: &str = "\u{002b50}";
@@ -101,19 +101,19 @@ static ALBUM: LazyLock<String> = LazyLock::new(|| {
     }
 });
 
-/// Returns true, if the [name] option is present
-/// on the command line.
-///
-fn flag(name: &str) -> bool {
-    matches!(ARGS.value_source(name), Some(ValueSource::CommandLine))
-}
-
 /// Holds the -v option count.
 ///
 static VERBOSE_LEVEL: LazyLock<u8> = LazyLock::new(|| match ARGS.value_source("v") {
     Some(ValueSource::CommandLine) => ARGS.get_count("v"),
     _ => 0,
 });
+
+/// Returns true, if the [name] option is present
+/// on the command line.
+///
+fn flag(name: &str) -> bool {
+    matches!(ARGS.value_source(name), Some(ValueSource::CommandLine))
+}
 
 /// Returns the string value, associated with the [name] option.
 /// Defined, if flag(name) is true.
