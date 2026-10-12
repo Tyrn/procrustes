@@ -2,6 +2,9 @@ mod spinner;
 use crate::spinner as spin;
 use crate::spinner::Spinner;
 
+mod icons;
+use crate::icons::*;
+
 use alphanumeric_sort::sort_path_slice;
 use chrono::{DateTime, Utc};
 use clap::{parser::ValueSource, Arg, ArgAction, ArgMatches, Command};
@@ -45,20 +48,6 @@ const APP_DESCRIPTION: &str = concatcp!(
     \n\n<src> as a single file: \
     \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg ."
 );
-
-const INVALID_ICON: &str = "\u{00274c}";
-const WARNING_ICON: &str = "\u{01f4a7}";
-const BDELIM_ICON: &str = "\u{01f539}";
-const ODELIM_ICON: &str = "\u{01f538}";
-const RSUSP_ICON: &str = "\u{002753}";
-const SUSPICIOUS_ICON: &str = "\u{002754}";
-const DONE_ICON: &str = "\u{01f7e2}";
-const COLUMN_ICON: &str = "\u{002b51}";
-const LINK_ICON: &str = "\u{002026}";
-const START_ICON: &str = "\u{01f4a3}";
-const STOP_ICON: &str = "\u{01f4a5}";
-const USE_ICON: &str = "\u{002b50}";
-const PRAISE_ICON: &str = "\u{01f341}";
 
 static KNOWN_EXTENSIONS: [&str; 9] = [
     "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",

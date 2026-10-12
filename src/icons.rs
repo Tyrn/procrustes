@@ -1,0 +1,14 @@
+pub const INVALID_ICON: &str = "\u{274c}";
+pub const WARNING_ICON: &str = "\u{1f4a7}";
+pub const BDELIM_ICON: &str = "\u{1f539}";
+pub const ODELIM_ICON: &str = "\u{1f538}";
+pub const RSUSP_ICON: &str = "\u{2753}";
+pub const SUSPICIOUS_ICON: &str = "\u{2754}";
+pub const DONE_ICON: &str = "\u{1f7e2}";
+pub const COLUMN_ICON: &str = "\u{2b51}";
+pub const LINK_ICON: &str = "\u{2026}";
+pub const START_ICON: &str = "\u{1f4a3}";
+pub const STOP_ICON: &str = "\u{1f4a5}";
+pub const USE_ICON: &str = "\u{2b50}";
+pub const PRAISE_ICON: &str = "\u{1f341}";
+pub const SUCCESS_ICON: &str = "\u{1f3c5}";

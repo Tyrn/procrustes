@@ -1,4 +1,6 @@
-use crate::{str_shrink, BDELIM_ICON};
+use crate::icons::{BDELIM_ICON, SUCCESS_ICON};
+use crate::str_shrink;
+use const_format::formatcp;
 use spinach::{Color, RunningSpinner, Spinner as SpinachSpinner};
 use spinner as daddy;
 use std::cell::Cell;
@@ -76,8 +78,9 @@ impl Spinner for PrettySpinner {
 
     fn stop(&mut self) {
         if let Some(spinner) = self.spinner.take() {
-            // spinner.stop();
-            spinner.symbols(vec!["\u{00A0}🏅"]).stop();
+            spinner
+                .symbols(vec![formatcp!("\u{00A0}{SUCCESS_ICON}")])
+                .stop();
         }
     }
 }

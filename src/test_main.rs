@@ -1,4 +1,6 @@
 use super::*;
+use crate::icons::LINK_ICON;
+use const_format::formatcp;
 
 #[test]
 fn test_format() {
@@ -72,18 +74,30 @@ fn test_str_shrink() {
 
     assert_eq!(cyr1.chars().collect::<Vec<char>>().len(), 44);
 
-    assert_eq!(str_shrink(cyr1, 10), "Однаж ⚡ На..");
-    assert_eq!(str_shrink(lat1, 20), "The quick ⚡ lazy dog!");
-    assert_eq!(str_shrink(cyr1, 20), "Однажды иг ⚡ дейца На..");
-    assert_eq!(str_shrink(lat1, 30), "The quick brown ⚡ r the lazy dog!");
-    assert_eq!(str_shrink(cyr1, 30), "Однажды играли ⚡ огвардейца На..");
+    assert_eq!(str_shrink(cyr1, 10), formatcp!("Однаж {LINK_ICON} На.."));
+    assert_eq!(
+        str_shrink(lat1, 20),
+        formatcp!("The quick {LINK_ICON} lazy dog!")
+    );
+    assert_eq!(
+        str_shrink(cyr1, 20),
+        formatcp!("Однажды иг {LINK_ICON} дейца На..")
+    );
+    assert_eq!(
+        str_shrink(lat1, 30),
+        formatcp!("The quick brown {LINK_ICON} r the lazy dog!")
+    );
+    assert_eq!(
+        str_shrink(cyr1, 30),
+        formatcp!("Однажды играли {LINK_ICON} огвардейца На..")
+    );
     assert_eq!(
         str_shrink(lat1, 43),
-        "The quick brown fox j ⚡ ps over the lazy dog!"
+        formatcp!("The quick brown fox j {LINK_ICON} ps over the lazy dog!")
     );
     assert_eq!(
         str_shrink(cyr1, 43),
-        "Однажды играли в карт ⚡ у конногвардейца На.."
+        formatcp!("Однажды играли в карт {LINK_ICON} у конногвардейца На..")
     );
     assert_eq!(str_shrink(lat1, 44), lat1);
     assert_eq!(str_shrink(cyr1, 44), cyr1);
