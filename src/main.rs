@@ -21,6 +21,7 @@ use std::{
     path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     process::exit,
     sync::LazyLock,
+    sync::OnceLock,
     time::Instant,
 };
 use tempfile::TempDir;
@@ -48,6 +49,20 @@ const APP_DESCRIPTION: &str = concatcp!(
     \n\n<src> as a single file: \
     \n\nlibrary $ procrustes -va 'Vladimir Nabokov' -u 'Ada' ada.ogg ."
 );
+
+#[derive(Debug)]
+struct Context {
+    tracks: u64,  // Audiofile count in the source tree
+    width: usize, // Decimal digits of [tracks]
+    bytes: u64,   // Sum of the file sizes of all the tracks
+    dst: PathBuf, // Destination root directory
+}
+
+static CONTEXT: OnceLock<Context> = OnceLock::new();
+
+fn ctx() -> &'static Context {
+    CONTEXT.get().expect("CONTEXT not initialized")
+}
 
 static KNOWN_EXTENSIONS: [&str; 9] = [
     "MP3", "OGG", "M4A", "M4B", "OPUS", "WMA", "FLAC", "APE", "WAV",
@@ -733,9 +748,6 @@ fn track_copy(
     ii: u64,
     src_file: &Path,
     step: &[PathBuf], // All the subdirectories to be created below [dst].
-    dst: &Path,       // Basic destination directory.
-    width: usize,
-    tracks_total: u64,
     log: &mut Vec<String>,
 ) {
     fn step_flat_collect(_step: &[PathBuf]) -> PathBuf {
@@ -780,20 +792,13 @@ fn track_copy(
         dst_bytes
     }
 
-    fn out_track_verbose(
-        ii: u64,
-        width: usize,
-        tracks_total: u64,
-        path: &Path,
-        dst_bytes: u64,
-        src_bytes: u64,
-    ) {
+    fn out_track_verbose(ii: u64, path: &Path, dst_bytes: u64, src_bytes: u64) {
         print!(
             "{:1$}{2}{3}  {4}",
             ii,
-            width,
+            ctx().width,
             COLUMN_ICON,
-            tracks_total,
+            ctx().tracks,
             path.strip_prefix(DST_DIR.as_path())
                 .unwrap_or(path)
                 .display()
@@ -810,14 +815,7 @@ fn track_copy(
         }
         println!();
     }
-    fn out_track_terse(
-        _ii: u64,
-        _width: usize,
-        _tracks_total: u64,
-        _path: &Path,
-        _dst_bytes: u64,
-        _src_bytes: u64,
-    ) {
+    fn out_track_terse(_ii: u64, _path: &Path, _dst_bytes: u64, _src_bytes: u64) {
         print!(".");
         io::stdout().flush().unwrap();
     }
@@ -825,7 +823,7 @@ fn track_copy(
     type StepCollect = fn(&[PathBuf]) -> PathBuf;
     type StepCreateDir = fn(&Path, &Path);
     type FileCopyTags = fn(u64, &Path, &Path, &mut Vec<String>) -> u64;
-    type OutTrack = fn(u64, usize, u64, &Path, u64, u64);
+    type OutTrack = fn(u64, &Path, u64, u64);
 
     static STEP_COLLECT: LazyLock<StepCollect> = LazyLock::new(|| {
         if flag("t") {
@@ -857,15 +855,14 @@ fn track_copy(
     });
 
     let stride: PathBuf = STEP_COLLECT(step);
-    STEP_CREATE_DIR(dst, &stride);
-    let dst_file = dst
+    STEP_CREATE_DIR(&ctx().dst, &stride);
+    let dst_file = &ctx()
+        .dst
         .join(&stride)
-        .join(track_decorate(ii, src_file, step, width));
+        .join(track_decorate(ii, src_file, step, ctx().width));
 
     OUT_TRACK(
         ii,
-        width,
-        tracks_total,
         &dst_file,
         FILE_COPYTAGS(ii, src_file, &dst_file, log),
         src_file.metadata().unwrap().len(),
@@ -875,14 +872,7 @@ fn track_copy(
 /// Copies all the valid tracks to their destination, according to
 /// the options and GlobalState.
 ///
-fn album_copy(
-    now: &Instant,
-    src: &Path,
-    dst: &Path,
-    tracks_total: u64,
-    bytes_total: u64,
-    log: &mut Vec<String>,
-) {
+fn album_copy(now: &Instant, src: &Path, log: &mut Vec<String>) {
     fn show_dst() {
         let s = format!("{}{}", DST_DIR.display(), MAIN_SEPARATOR_STR);
         println!(" >> {} >>", s.cyan());
@@ -902,12 +892,12 @@ fn album_copy(
         show_dst();
     }
 
-    fn out_done(tracks_total: u64, bytes_total: u64, time_elapsed: f64) {
+    fn out_done(time_elapsed: f64) {
         println!(
             " {} Done ({}, {}; {:.1}s).",
             DONE_ICON,
-            tracks_total,
-            human_fine(bytes_total),
+            ctx().tracks,
+            human_fine(ctx().bytes),
             time_elapsed,
         );
     }
@@ -923,7 +913,7 @@ fn album_copy(
         LazyLock::new(|| if flag("v") { out_nop } else { out_start_terse });
     static OUT_TAIL: LazyLock<fn()> =
         LazyLock::new(|| if flag("v") { out_nop } else { out_tail_terse });
-    static OUT_DONE: LazyLock<fn(u64, u64, f64)> = LazyLock::new(|| out_done);
+    static OUT_DONE: LazyLock<fn(f64)> = LazyLock::new(|| out_done);
 
     /// Iterator over track indices.
     type TrackIter = Box<dyn Iterator<Item = u64>>;
@@ -939,7 +929,7 @@ fn album_copy(
         }
     });
 
-    if tracks_total < 1 {
+    if ctx().tracks < 1 {
         println!(
             " {} No audio files found at \"{}\"",
             WARNING_ICON,
@@ -950,14 +940,12 @@ fn album_copy(
 
     OUT_START();
 
-    let width = format!("{}", tracks_total).len();
-
-    for (i, (src, step)) in zip_eq(RANGE(tracks_total), dir_walk(src, [].to_vec())) {
-        track_copy(i, &src, &step, dst, width, tracks_total, log);
+    for (i, (src, step)) in zip_eq(RANGE(ctx().tracks), dir_walk(src, [].to_vec())) {
+        track_copy(i, &src, &step, log);
     }
 
     OUT_TAIL();
-    OUT_DONE(tracks_total, bytes_total, now.elapsed().as_secs_f64());
+    OUT_DONE(now.elapsed().as_secs_f64());
 }
 
 /// Returns the statistics of all the audiofiles in [dir] and its subdirectories
@@ -1081,14 +1069,16 @@ fn main() {
 
         // Statistics reported, nothing else to be done.
     } else {
-        album_copy(
-            &now,
-            &src,
-            &dst_create(),
-            tracks_total,
-            bytes_total,
-            &mut log,
-        );
+        CONTEXT
+            .set(Context {
+                tracks: tracks_total,
+                width: format!("{}", tracks_total).len(),
+                bytes: bytes_total,
+                dst: dst_create(),
+            })
+            .expect("CONTEXT already set");
+
+        album_copy(&now, &src, &mut log);
 
         // Second pass through the source done, all the tracks, if any, copied to destination.
     }
