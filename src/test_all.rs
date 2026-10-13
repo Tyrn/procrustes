@@ -1,6 +1,10 @@
-use super::*;
-use crate::icons::LINK_ICON;
+//use super::*;
+use crate::{
+    has_ext_of, human_fine, icons::LINK_ICON, initials::initials, is_audiofile_ext, str_shrink,
+    str_strip_numbers, Path, PathBuf,
+};
 use const_format::formatcp;
+use unicode_segmentation::UnicodeSegmentation;
 
 #[test]
 fn test_format() {

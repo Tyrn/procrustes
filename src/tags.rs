@@ -45,7 +45,7 @@ fn quiet_if_not_verbose() -> Option<gag::Gag> {
 // These are compiled under either backend, so both share one copy.
 // ---------------------------------------------------------------------
 
-use crate::{initials, ALBUM, ARTIST, IS_ALBUM, IS_ARTIST};
+use crate::{initials::initials, ALBUM, ARTIST, IS_ALBUM, IS_ARTIST};
 // (adjust the import path above to match where these live in your crate)
 
 static INITIALS: LazyLock<String> = LazyLock::new(|| {
