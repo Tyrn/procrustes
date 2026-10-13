@@ -64,6 +64,22 @@ rustup override unset
 rustup update
 ```
 
+- Various checks
+
+```
+rustup show active-toolchain
+```
+
+```
+rustup which rust-analyzer
+```
+
+On error/mismatch
+
+```
+rustup component add rust-analyzer
+```
+
 ### Build
 
 ```
