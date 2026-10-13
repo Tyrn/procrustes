@@ -1,5 +1,5 @@
+use crate::helpers::str_shrink;
 use crate::icons::{BDELIM_ICON, SUCCESS_ICON};
-use crate::str_shrink;
 use const_format::formatcp;
 use spinach::{Color, RunningSpinner, Spinner as SpinachSpinner};
 use spinner as daddy;

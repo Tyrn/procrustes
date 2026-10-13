@@ -1,9 +1,9 @@
-//use super::*;
-use crate::{
-    has_ext_of, human_fine, icons::LINK_ICON, initials::initials, is_audiofile_ext, str_shrink,
-    str_strip_numbers, Path, PathBuf,
-};
 use const_format::formatcp;
+use procrustes::helpers::{
+    has_ext_of, human_fine, is_audiofile_ext, str_shrink, str_strip_numbers,
+};
+use procrustes::{icons::LINK_ICON, initials::initials};
+use std::path::{Path, PathBuf};
 use unicode_segmentation::UnicodeSegmentation;
 
 #[test]
