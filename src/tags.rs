@@ -216,8 +216,8 @@ pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
 
     use lofty::config::WriteOptions;
     use lofty::file::AudioFile;
-    use lofty::prelude::{Accessor, TagExt, TaggedFileExt};
-    use lofty::tag::Tag;
+    use lofty::prelude::{Accessor, TaggedFileExt};
+    use lofty::tag::{Tag, TagType};
 
     let _silence = quiet_if_not_verbose();
 
@@ -232,30 +232,53 @@ pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
         )
     });
 
-    // Choose a tag type appropriate for the file's format, creating an
-    // empty tag if the file has none yet.
+    // ---- compose the field values once ----
+
+    let title = TITLE_COMPOSE(ii, src);
+    let track = if flag("d") { None } else { Some(ii as u32) };
+    let artist = if *IS_ARTIST {
+        Some(ARTIST.clone())
+    } else {
+        None
+    };
+    let album = if *IS_ALBUM { Some(ALBUM.clone()) } else { None };
+
+    // Apply the composed values to a single tag.
+    let apply = |tag: &mut Tag| {
+        tag.set_title(title.clone());
+        if let Some(t) = track {
+            tag.set_track(t);
+        }
+        if let Some(ref a) = artist {
+            tag.set_artist(a.clone());
+        }
+        if let Some(ref a) = album {
+            tag.set_album(a.clone());
+        }
+    };
+
+    // ---- primary tag (ID3v2 for MP3, Vorbis for FLAC, etc.) ----
+
     let tag_type = tagged.primary_tag_type();
     if tagged.primary_tag_mut().is_none() {
         tagged.insert_tag(Tag::new(tag_type));
     }
-
-    let tag = tagged
+    let primary = tagged
         .primary_tag_mut()
         .unwrap_or_else(|| panic!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON));
+    apply(primary);
 
-    // ---- compose and apply ----
+    // ---- additional ID3v1 tag (only meaningful for MP3) ----
 
-    tag.set_title(TITLE_COMPOSE(ii, src));
-
-    if !flag("d") {
-        tag.set_track(ii as u32);
-    }
-
-    if *IS_ARTIST {
-        tag.set_artist(ARTIST.clone());
-    }
-    if *IS_ALBUM {
-        tag.set_album(ALBUM.clone());
+    // Only add ID3v1 if the primary tag is ID3v2, i.e. the file is MP3-like.
+    // For non-MP3 formats, adding an ID3v1 tag would be out of place.
+    if tag_type == TagType::Id3v2 {
+        if tagged.tag_mut(TagType::Id3v1).is_none() {
+            tagged.insert_tag(Tag::new(TagType::Id3v1));
+        }
+        if let Some(id3v1) = tagged.tag_mut(TagType::Id3v1) {
+            apply(id3v1);
+        }
     }
 
     // ---- write back ----
