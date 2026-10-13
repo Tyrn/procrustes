@@ -1,0 +1,12 @@
+// --- REPL behavior ---
+:timing
+:cache 2048
+
+// --- Local project ---
+:dep procrustes = { path = "." }
+
+// --- Common exploration crates ---
+:dep itertools = "0.15"
+:dep regex = "1"
+:dep chrono = "0.4"
+:dep owo-colors = "4"
