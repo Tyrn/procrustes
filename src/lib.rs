@@ -859,9 +859,11 @@ fn tracks_count(
     log: &mut Vec<String>,
 ) -> (u64, u64, u64, u64) {
     fn log_name_v(p: &Path) -> String {
-        let (icon, stamp) = match p.metadata().unwrap().created() {
+        let meta = p.metadata().unwrap(); // also worth handling
+
+        let (icon, stamp) = match meta.created() {
             Ok(date) => (BDELIM_ICON, DateTime::<Utc>::from(date)),
-            Err(_) => match p.metadata().unwrap().modified() {
+            Err(_) => match meta.modified() {
                 Ok(date) => (ODELIM_ICON, DateTime::<Utc>::from(date)),
                 Err(_) => (
                     INVALID_ICON,
@@ -869,16 +871,20 @@ fn tracks_count(
                 ),
             },
         };
+
+        let display = p
+            .strip_prefix(env::current_dir().unwrap())
+            .unwrap_or(p)
+            .to_str()
+            .unwrap_or("<non-UTF-8 path>");
+
         format!(
             "{}{} {}  {} {}",
             &stamp.date_naive().to_string()[..10],
             icon,
-            p.strip_prefix(env::current_dir().unwrap())
-                .unwrap()
-                .to_str()
-                .unwrap(),
+            display,
             COLUMN_ICON,
-            human_fine(p.metadata().unwrap().len()),
+            human_fine(meta.len()),
         )
     }
     fn log_name(p: &Path) -> String {
