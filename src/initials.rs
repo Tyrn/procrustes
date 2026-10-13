@@ -6,6 +6,15 @@ use unicode_segmentation::UnicodeSegmentation;
 /// Returns a comma-separated list of initials,
 /// [authors] being a comma-separated list of full names.
 ///
+/// ```
+/// use procrustes::initials::initials;
+///
+/// assert_eq!(initials("Jason dinAlt"), "J.dinA.");
+/// assert_eq!(initials("Jackie McGee"), "J.McG.");
+/// assert_eq!(initials("Ross Macdonald"), "R.M.");
+/// assert_eq!(initials("Madonna"), "M.");
+/// assert_eq!(initials(""), "");
+/// ```
 pub fn initials(authors: &str) -> String {
     static SPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[\s.]+").unwrap());
     static NICKNAME: LazyLock<Regex> =
