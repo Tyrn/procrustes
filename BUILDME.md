@@ -46,6 +46,18 @@ rustup default nightly
 rustup override set nightly
 ```
 
+Don't bother if the project has `rust-toolchain.toml`
+
+- Manipulate overrides
+
+```
+rustup override list
+```
+
+```
+rustup override unset
+```
+
 - Update all toolchains
 
 ```
