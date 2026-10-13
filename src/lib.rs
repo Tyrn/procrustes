@@ -766,90 +766,61 @@ fn track_copy(
     );
 }
 
-/// Copies all the valid tracks to their destination, according to
-/// the options and GlobalState.
+/// Returns true, if [path] satisfies file-type (-e) CLI suggestion,
+/// otherwise false.
+/// If the file type is not supplied, returns true.
 ///
-fn album_copy(now: &Instant, src: &Path, log: &mut Vec<String>) {
-    fn show_dst() {
-        let s = format!("{}{}", DST_DIR.display(), MAIN_SEPARATOR_STR);
-        println!(" >> {} >>", s.cyan());
-    }
-
-    fn out_start_terse() {
-        show_dst();
-        print!(" {} ", START_ICON);
-        io::stdout().flush().unwrap();
-    }
-    fn out_nop() {
-        show_dst();
-    }
-
-    fn out_tail_terse() {
-        println!(" {}", STOP_ICON);
-        show_dst();
-    }
-
-    fn out_done(time_elapsed: f64) {
-        println!(
-            " {} Done ({}, {}; {:.1}s).",
-            DONE_ICON,
-            ctx().tracks,
-            human_fine(ctx().bytes),
-            time_elapsed,
-        );
-    }
-
-    fn tracks_range(range: u64) -> Box<dyn Iterator<Item = u64>> {
-        Box::new(1_u64..=range)
-    }
-    fn tracks_range_rev(range: u64) -> Box<dyn Iterator<Item = u64>> {
-        Box::new((1_u64..=range).rev())
-    }
-
-    static OUT_START: LazyLock<fn()> =
-        LazyLock::new(|| if flag("v") { out_nop } else { out_start_terse });
-    static OUT_TAIL: LazyLock<fn()> =
-        LazyLock::new(|| if flag("v") { out_nop } else { out_tail_terse });
-    static OUT_DONE: LazyLock<fn(f64)> = LazyLock::new(|| out_done);
-
-    /// Iterator over track indices.
-    type TrackIter = Box<dyn Iterator<Item = u64>>;
-
-    /// A function producing an iterator of track indices from a count.
-    type RangeFn = fn(u64) -> TrackIter;
-
-    static RANGE: LazyLock<RangeFn> = LazyLock::new(|| {
-        if flag("r") {
-            tracks_range_rev
+fn is_pattern_ok(path: &Path) -> bool {
+    fn is_regex() -> bool {
+        if flag("e") {
+            let e = sval("e");
+            e.contains('*') || e.contains('[') || e.contains(']') || e.contains('?')
         } else {
-            tracks_range
+            false
+        }
+    }
+    fn always_true(_path: &Path) -> bool {
+        true
+    }
+    fn is_ext_matching(path: &Path) -> bool {
+        has_ext_of(path.to_str().unwrap(), &EXT)
+    }
+    fn is_pattern_matching(path: &Path) -> bool {
+        (*PATTERN).matches(path.file_name().unwrap().to_str().unwrap())
+    }
+
+    static EXT: LazyLock<String> = LazyLock::new(|| {
+        if flag("e") {
+            sval("e").to_string()
+        } else {
+            "".to_string()
+        }
+    });
+    static PATTERN: LazyLock<glob::Pattern> = LazyLock::new(|| {
+        if is_regex() {
+            glob::Pattern::new(sval("e")).unwrap()
+        } else {
+            glob::Pattern::new("*").unwrap()
+        }
+    });
+    static IS_PATTERN_OK: LazyLock<fn(&Path) -> bool> = LazyLock::new(|| {
+        if is_regex() {
+            is_pattern_matching
+        } else if flag("e") {
+            is_ext_matching
+        } else {
+            always_true
         }
     });
 
-    if ctx().tracks < 1 {
-        println!(
-            " {} No audio files found at \"{}\"",
-            WARNING_ICON,
-            src.display()
-        );
-        exit(1);
-    }
-
-    OUT_START();
-
-    for (i, (src, step)) in zip_eq(RANGE(ctx().tracks), dir_walk(src, [].to_vec())) {
-        track_copy(i, &src, &step, log);
-    }
-
-    OUT_TAIL();
-    OUT_DONE(now.elapsed().as_secs_f64());
+    (*IS_PATTERN_OK)(path)
 }
 
 /// Returns the statistics of all the audiofiles in [dir] and its subdirectories
 /// in the form of a tuple:
 /// (
 /// Full count of the files with common extensions, which failed to open (suspicious),
-/// Sum of all the sizes of the suspicious audiofiles/tracks (suspicious bytes)
+/// Sum of all the sizes of the suspicious audiofiles/tracks (suspicious bytes),
 /// Full count of the valid audiofiles (tracks),
 /// Sum of all the sizes of the valid audiofiles (bytes)
 /// )
@@ -935,6 +906,87 @@ fn tracks_count(
     (suspicious, suspicious_bytes, tracks, bytes)
 }
 
+/// Copies all the valid tracks to their destination, according to
+/// the options and GlobalState.
+///
+fn album_copy(now: &Instant, src: &Path, log: &mut Vec<String>) {
+    fn show_dst() {
+        let s = format!("{}{}", DST_DIR.display(), MAIN_SEPARATOR_STR);
+        println!(" >> {} >>", s.cyan());
+    }
+
+    fn out_start_terse() {
+        show_dst();
+        print!(" {} ", START_ICON);
+        io::stdout().flush().unwrap();
+    }
+    fn out_nop() {
+        show_dst();
+    }
+
+    fn out_tail_terse() {
+        println!(" {}", STOP_ICON);
+        show_dst();
+    }
+
+    fn out_done(time_elapsed: f64) {
+        println!(
+            " {} Done ({}, {}; {:.1}s).",
+            DONE_ICON,
+            ctx().tracks,
+            human_fine(ctx().bytes),
+            time_elapsed,
+        );
+    }
+
+    fn tracks_range(range: u64) -> Box<dyn Iterator<Item = u64>> {
+        Box::new(1_u64..=range)
+    }
+    fn tracks_range_rev(range: u64) -> Box<dyn Iterator<Item = u64>> {
+        Box::new((1_u64..=range).rev())
+    }
+
+    static OUT_START: LazyLock<fn()> =
+        LazyLock::new(|| if flag("v") { out_nop } else { out_start_terse });
+    static OUT_TAIL: LazyLock<fn()> =
+        LazyLock::new(|| if flag("v") { out_nop } else { out_tail_terse });
+    static OUT_DONE: LazyLock<fn(f64)> = LazyLock::new(|| out_done);
+
+    /// Iterator over track indices.
+    type TrackIter = Box<dyn Iterator<Item = u64>>;
+
+    /// A function producing an iterator of track indices from a count.
+    type RangeFn = fn(u64) -> TrackIter;
+
+    static RANGE: LazyLock<RangeFn> = LazyLock::new(|| {
+        if flag("r") {
+            tracks_range_rev
+        } else {
+            tracks_range
+        }
+    });
+
+    if ctx().tracks < 1 {
+        println!(
+            " {} No audio files found at \"{}\"",
+            WARNING_ICON,
+            src.display()
+        );
+        exit(1);
+    }
+
+    OUT_START();
+
+    for (i, (src, step)) in zip_eq(RANGE(ctx().tracks), dir_walk(src, [].to_vec())) {
+        track_copy(i, &src, &step, log);
+    }
+
+    OUT_TAIL();
+    OUT_DONE(now.elapsed().as_secs_f64());
+}
+
+/// To be wrapped in main()
+///
 pub fn app() {
     LazyLock::force(&ARGS);
     // let _ = *ARGS; // This magic works just as nice.
@@ -998,54 +1050,4 @@ pub fn app() {
     }
 
     // Final report done.
-}
-
-/// Returns true, if [path] satisfies file-type (-e) CLI suggestion,
-/// otherwise false.
-/// If the file type is not supplied, returns true.
-///
-fn is_pattern_ok(path: &Path) -> bool {
-    fn is_regex() -> bool {
-        if flag("e") {
-            let e = sval("e");
-            e.contains('*') || e.contains('[') || e.contains(']') || e.contains('?')
-        } else {
-            false
-        }
-    }
-    fn always_true(_path: &Path) -> bool {
-        true
-    }
-    fn is_ext_matching(path: &Path) -> bool {
-        has_ext_of(path.to_str().unwrap(), &EXT)
-    }
-    fn is_pattern_matching(path: &Path) -> bool {
-        (*PATTERN).matches(path.file_name().unwrap().to_str().unwrap())
-    }
-
-    static EXT: LazyLock<String> = LazyLock::new(|| {
-        if flag("e") {
-            sval("e").to_string()
-        } else {
-            "".to_string()
-        }
-    });
-    static PATTERN: LazyLock<glob::Pattern> = LazyLock::new(|| {
-        if is_regex() {
-            glob::Pattern::new(sval("e")).unwrap()
-        } else {
-            glob::Pattern::new("*").unwrap()
-        }
-    });
-    static IS_PATTERN_OK: LazyLock<fn(&Path) -> bool> = LazyLock::new(|| {
-        if is_regex() {
-            is_pattern_matching
-        } else if flag("e") {
-            is_ext_matching
-        } else {
-            always_true
-        }
-    });
-
-    (*IS_PATTERN_OK)(path)
 }
