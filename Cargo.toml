@@ -6,6 +6,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["backend-taglib"]
+backend-taglib = ["dep:taglib"]
+backend-lofty = ["dep:lofty"]
+
 [dependencies]
 const_format = "0.2"
 gag = "1"
@@ -16,13 +21,15 @@ tempfile = "3"
 alphanumeric-sort = "1.4.3"
 chrono = "0.4"
 clap = "4"
-taglib = "*"
 glob = "0.3.0"
 spinner = "0.5.0"
 terminal-spinners = "0.3.2"
 spinach = "3"
 owo-colors = "4"
-lofty = "0.25.4"
+
+# Backend dependencies — exactly one is enabled via the features above.
+taglib = { version = "*", optional = true }
+lofty = { version = "0.25.4", optional = true }
 
 # For distribution — smallest, fastest binary
 [profile.release]

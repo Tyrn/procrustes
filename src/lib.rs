@@ -5,6 +5,9 @@ use crate::spinner::Spinner;
 mod icons;
 use crate::icons::*;
 
+mod tags;
+use tags::{file_set_tags, is_audiofile};
+
 use alphanumeric_sort::sort_path_slice;
 use chrono::{DateTime, Utc};
 use clap::{parser::ValueSource, Arg, ArgAction, ArgMatches, Command};
@@ -426,113 +429,6 @@ fn file_copy(src: &Path, dst: &Path) {
             BDELIM_ICON
         )
     });
-}
-
-/// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
-/// composition.
-///
-fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
-    let _silence = (*VERBOSE_LEVEL < 2).then(|| gag::Gag::stderr().unwrap());
-    fn title_fi(ii: u64, src: &Path) -> String {
-        let stem = &src.file_stem().unwrap().to_str().unwrap();
-
-        format!("{}>{}", ii, stem)
-    }
-    fn title_f(_ii: u64, src: &Path) -> String {
-        let stem = &src.file_stem().unwrap().to_str().unwrap();
-
-        stem.to_string()
-    }
-    fn title_i(ii: u64, _src: &Path) -> String {
-        format!("{} {}", ii, *TITLE_TAIL)
-    }
-
-    fn tag_set_track_number(tag: &mut taglib::Tag, ii: u64) {
-        tag.set_track(ii as u32);
-    }
-    fn tag_nop_track_number(_tag: &mut taglib::Tag, _ii: u64) {}
-
-    fn tag_set_artist_album(tag: &mut taglib::Tag, ii: u64, src: &Path) {
-        tag.set_title(&TITLE_COMPOSE(ii, src));
-        tag.set_artist(&ARTIST);
-        tag.set_album(&ALBUM);
-    }
-    fn tag_set_artist(tag: &mut taglib::Tag, ii: u64, src: &Path) {
-        tag.set_title(&TITLE_COMPOSE(ii, src));
-        tag.set_artist(&ARTIST);
-    }
-    fn tag_set_album(tag: &mut taglib::Tag, ii: u64, src: &Path) {
-        tag.set_title(&TITLE_COMPOSE(ii, src));
-        tag.set_album(&ALBUM);
-    }
-    fn tag_nop_all(_tag: &mut taglib::Tag, _ii: u64, _src: &Path) {}
-
-    type TitleCompose = fn(u64, &Path) -> String;
-    type TagSetTrackNumber = fn(&mut taglib::Tag, u64);
-    type TagSetTheRest = fn(&mut taglib::Tag, u64, &Path);
-
-    static INITIALS: LazyLock<String> = LazyLock::new(|| {
-        if *IS_ARTIST {
-            initials(&ARTIST)
-        } else {
-            "".to_string()
-        }
-    });
-    static TITLE_TAIL: LazyLock<String> = LazyLock::new(|| {
-        if *IS_ARTIST && *IS_ALBUM {
-            format!("{} - {}", INITIALS.as_str(), ALBUM.as_str())
-        } else if *IS_ARTIST {
-            ARTIST.to_string()
-        } else if *IS_ALBUM {
-            ALBUM.to_string()
-        } else {
-            "".to_string()
-        }
-    });
-    static TITLE_COMPOSE: LazyLock<TitleCompose> = LazyLock::new(|| {
-        if flag("F") {
-            title_fi
-        } else if flag("f") {
-            title_f
-        } else {
-            title_i
-        }
-    });
-    static TAG_SET_TRACK_NUMBER: LazyLock<TagSetTrackNumber> = LazyLock::new(|| {
-        if flag("d") {
-            tag_nop_track_number
-        } else {
-            tag_set_track_number
-        }
-    });
-    static TAG_SET_THE_REST: LazyLock<TagSetTheRest> = LazyLock::new(|| {
-        if *IS_ARTIST && *IS_ALBUM {
-            tag_set_artist_album
-        } else if *IS_ARTIST {
-            tag_set_artist
-        } else if *IS_ALBUM {
-            tag_set_album
-        } else {
-            tag_nop_all
-        }
-    });
-
-    let tag_file = taglib::File::new(dst).unwrap_or_else(|_| {
-        panic!(
-            "{}Error while opening \"{}\" for tagging.{}",
-            BDELIM_ICON,
-            dst.to_str().unwrap(),
-            BDELIM_ICON
-        )
-    });
-    let mut tag = tag_file
-        .tag()
-        .unwrap_or_else(|_| panic!("{}No tagging data.{}", BDELIM_ICON, BDELIM_ICON));
-
-    TAG_SET_TRACK_NUMBER(&mut tag, ii);
-    TAG_SET_THE_REST(&mut tag, ii, src);
-
-    tag_file.save();
 }
 
 #[allow(dead_code)]
@@ -1210,21 +1106,6 @@ fn is_audiofile_ext(path: &Path) -> bool {
     KNOWN_EXTENSIONS
         .iter()
         .any(|ext| has_ext_of(path.to_str().unwrap(), ext))
-}
-
-/// Returns true, if [path] is a valid audio file, otherwise false.
-///
-fn is_audiofile(path: &Path) -> bool {
-    let _silence = (*VERBOSE_LEVEL < 2).then(|| gag::Gag::stderr().unwrap());
-
-    if is_pattern_ok(path) {
-        match taglib::File::new(path) {
-            Err(_) => false,
-            Ok(v) => v.tag().is_ok(),
-        }
-    } else {
-        false
-    }
 }
 
 fn has_ext_of(path: &str, ext: &str) -> bool {
