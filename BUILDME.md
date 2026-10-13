@@ -4,7 +4,7 @@ Audio album builder; copy and edit on the fly.
 
 ## Development
 
-- [Format Rust code](https://github.com/rust-lang/rustfmt>)
+- [Format Rust code](https://github.com/rust-lang/rustfmt)
 - [TagLib](https://github.com/taglib/taglib) library, release build, required on the system;
   [Rust bindings](https://github.com/ebassi/taglib-rust)
 - Arch Linux family:
@@ -23,6 +23,33 @@ sudo apt-get install libtagc0-dev
 
 ```
 sudo dnf install taglib-devel
+```
+
+### Toolchain
+
+- Install `nightly` (or `stable`)
+
+```
+rustup toolchain install nightly
+```
+
+- Set default
+
+```
+rustup default nightly
+```
+
+- Better still, select inside your project root,
+  then check `.rustup/settings.toml`
+
+```
+rustup override set nightly
+```
+
+- Update all toolchains
+
+```
+rustup update
 ```
 
 ### Build
