@@ -7,7 +7,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["backend-lofty"]
+default = ["backend-taglib"]
 backend-taglib = ["dep:taglib"]
 backend-lofty = ["dep:lofty"]
 
