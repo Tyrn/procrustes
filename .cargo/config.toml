@@ -1,0 +1,3 @@
+[build]
+# Uncomment during intensive development:
+profile = "release-dev"
