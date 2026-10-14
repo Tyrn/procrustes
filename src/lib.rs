@@ -164,7 +164,7 @@ fn args_retrieve() -> ArgMatches {
             Arg::new("l")
                 .short('l')
                 .long("alt-backend")
-                .help("Use the alternative (Lofty) backend for tag reading and writing")
+                .help("Use Lofty instead of TagLib for tag reading and writing")
                 .action(ArgAction::SetTrue)
         )
         .arg(
