@@ -83,7 +83,15 @@ rustup component add rust-analyzer
 ### Build
 
 ```
-cargo build [--release]
+cargo build
+```
+
+- If you ever want a lean build with only one backend, you can still do:
+
+```
+cargo build                                       # both backends, runtime choice
+cargo build --no-default-features --features backend-taglib   # lean, taglib only
+cargo build --no-default-features --features backend-lofty    # lean, lofty only
 ```
 
 ### Format
@@ -103,7 +111,7 @@ cargo test
 Install to `~/.cargo/bin`:
 
 ```
-cargo install --locked --path . [--debug]
+cargo install --locked --path .
 ```
 
 ### Publish
