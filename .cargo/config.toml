@@ -1,3 +1,6 @@
 [build]
-# Uncomment during intensive development:
+profile = "release-dev"
+
+# Change `release` to `release-dev` while in active development.
+[install]
 profile = "release-dev"
