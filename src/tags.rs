@@ -95,7 +95,7 @@ static TITLE_COMPOSE: LazyLock<TitleCompose> = LazyLock::new(|| {
 // ---------------------------------------------------------------------
 
 #[cfg(feature = "backend-taglib")]
-/// Returns true if [path] is a valid audio file according to TagLib.
+/// Returns true if `path` is a valid audio file according to `TagLib`.
 pub fn is_audiofile_taglib(path: &Path) -> bool {
     use crate::is_pattern_ok;
 
@@ -111,7 +111,7 @@ pub fn is_audiofile_taglib(path: &Path) -> bool {
 }
 
 #[cfg(feature = "backend-taglib")]
-/// Sets tags to [dst] using TagLib, composing the title from [ii] and [src].
+/// Sets tags to `dst` using `TagLib`, composing the title from `ii` and `src`.
 pub fn file_set_tags_taglib(ii: u64, src: &Path, dst: &Path) {
     use crate::BDELIM_ICON;
 
@@ -200,7 +200,7 @@ pub fn file_set_tags_taglib(ii: u64, src: &Path, dst: &Path) {
 const PARSING_MODE: lofty::config::ParsingMode = lofty::config::ParsingMode::Relaxed;
 
 #[cfg(feature = "backend-lofty")]
-/// Returns true if [path] is a valid audio file according to Lofty.
+/// Returns true if `path` is a valid audio file according to `Lofty`.
 pub fn is_audiofile_lofty(path: &Path) -> bool {
     use crate::is_pattern_ok;
     use lofty::config::ParseOptions;
@@ -220,7 +220,7 @@ pub fn is_audiofile_lofty(path: &Path) -> bool {
 }
 
 #[cfg(feature = "backend-lofty")]
-/// Sets tags to [dst] using Lofty, composing the title from [ii] and [src].
+/// Sets tags to `dst` using `Lofty`, composing the title from `ii` and `src`.
 pub fn file_set_tags_lofty(ii: u64, src: &Path, dst: &Path) {
     use crate::BDELIM_ICON;
 
@@ -369,16 +369,16 @@ static FILE_SET_TAGS: LazyLock<FileSetTags> = LazyLock::new(|| file_set_tags_lof
 
 // ---- public entry points ----
 
-/// Returns true if [path] is a valid audio file.
+/// Returns true if `path` is a valid audio file.
 ///
-/// Backend is chosen at runtime: TagLib by default, Lofty with `-l`.
+/// Backend is chosen at runtime: `TagLib` by default, `Lofty` with `-l`.
 pub fn is_audiofile(path: &Path) -> bool {
     IS_AUDIOFILE(path)
 }
 
-/// Sets tags to [dst] audio file, composing the title from [ii] and [src].
+/// Sets tags to `dst` audio file, composing the title from `ii` and `src`.
 ///
-/// Backend is chosen at runtime: TagLib by default, Lofty with `-l`.
+/// Backend is chosen at runtime: `TagLib` by default, `Lofty` with `-l`.
 pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
     FILE_SET_TAGS(ii, src, dst)
 }
