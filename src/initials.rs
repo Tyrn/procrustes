@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// Returns a comma-separated list of initials,
-/// [authors] being a comma-separated list of full names.
+/// `authors` being a comma-separated list of full names.
 ///
 /// ```
 /// use procrustes::initials::initials;
@@ -30,7 +30,7 @@ pub fn initials(authors: &str) -> String {
         UnicodeSegmentation::graphemes(s, true).collect()
     }
 
-    /// Converts [name] to its initial. Mostly by keeping the first character
+    /// Converts `name` to its initial. Mostly by keeping the first character
     /// and dropping the rest; deals with special cases, too. See the unit test.
     ///
     fn initial(name: &str) -> String {

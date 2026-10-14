@@ -64,6 +64,10 @@ struct Context {
 
 static CONTEXT: OnceLock<Context> = OnceLock::new();
 
+/// Returns the global `Context`. `ctx()` will panic,
+/// being called before the context initialization.
+/// Usage: `cxt().tracks`, `ctx().bytes`, etc.
+///
 fn ctx() -> &'static Context {
     CONTEXT.get().expect("CONTEXT not initialized")
 }
@@ -116,23 +120,23 @@ static VERBOSE_LEVEL: LazyLock<u8> = LazyLock::new(|| match ARGS.value_source("v
     _ => 0,
 });
 
-/// Returns true, if the [name] option is present
+/// Returns true, if the `name` option is present
 /// on the command line.
 ///
 fn flag(name: &str) -> bool {
     matches!(ARGS.value_source(name), Some(ValueSource::CommandLine))
 }
 
-/// Returns the string value, associated with the [name] option.
-/// Defined, if flag(name) is true.
+/// Returns the string value, associated with the `name` option.
+/// Defined, if flag(`name`) is true.
 fn sval(name: &str) -> &'static str {
     ARGS.get_one::<String>(name)
         .map(|s| s.as_str())
         .unwrap_or("NULL_STR")
 }
 
-/// Returns the PathBuf value, associated with the [name] option.
-/// Defined, if flag(name) is true.
+/// Returns the PathBuf value, associated with the `name` option.
+/// Defined, if flag(`name`) is true.
 ///
 fn pval(name: &str) -> PathBuf {
     Path::new(sval(name)).canonicalize().unwrap_or_else(|_| {
@@ -307,8 +311,8 @@ fn args_retrieve() -> ArgMatches {
         .get_matches()
 }
 
-/// Returns a vector of [dir] subdirectories, if [folders] is true,
-/// otherwise returns a vector of the audiofiles inside the [dir] directories.
+/// Returns a vector of `dir` subdirectories, if `folders` is true,
+/// otherwise returns a vector of the audiofiles inside the `dir` directories.
 ///
 fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
     Ok(fs::read_dir(dir)?
@@ -319,7 +323,7 @@ fn fs_entries(dir: &Path, folders: bool) -> Result<Vec<PathBuf>, io::Error> {
 }
 
 #[allow(dead_code)]
-/// Returns a vector of the directories and files inside [dir].
+/// Returns a vector of the directories and files inside `dir`.
 ///
 fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
     fs::read_dir(dir)?
@@ -327,7 +331,7 @@ fn dir_offspring(dir: &Path) -> Result<Vec<PathBuf>, io::Error> {
         .collect()
 }
 
-/// Returns sorted vectors of directories and audiofiles inside [dir].
+/// Returns sorted vectors of directories and audiofiles inside `dir`.
 ///
 fn dir_groom(dir: &Path) -> (Vec<PathBuf>, Vec<PathBuf>) {
     fn sort_lex(dirs: &mut [PathBuf], files: &mut [PathBuf]) {
@@ -370,7 +374,7 @@ type WalkIterator = Box<dyn Iterator<Item = WalkItem>>;
 type WalkStepDownFn = dyn Fn(PathBuf) -> WalkIterator;
 type WalkMakeItemFn = dyn Fn(PathBuf) -> WalkItem;
 
-/// Walks down the (source) [dir] tree, accumulating [step_down] on each recursion level.
+/// Walks down the (source) `dir` tree, accumulating `step_down` on each recursion level.
 /// Item is a tuple of
 /// (audiofile, Vec<subdirectory (to be created at destination/to make it possible)>).
 ///
@@ -425,7 +429,7 @@ fn dir_walk(dir: &Path, step_down: Vec<PathBuf>) -> WalkIterator {
     STREAM_FILES(dirs, files, Box::new(walk), Box::new(item))
 }
 
-/// Copies [src] to [dst], makes panic sensible.
+/// Copies `src` to `dst`, makes panic sensible.
 ///
 fn file_copy(src: &Path, dst: &Path) {
     fs::copy(src, dst).unwrap_or_else(|_| {
@@ -440,7 +444,7 @@ fn file_copy(src: &Path, dst: &Path) {
 }
 
 #[allow(dead_code)]
-/// Copies [src] to [dst], sets tags to [dst].
+/// Copies `src` to `dst`, sets tags to `dst`.
 ///
 fn file_copy_and_set_tags(ii: u64, src: &Path, dst: &Path) {
     file_copy(src, dst);
@@ -448,7 +452,7 @@ fn file_copy_and_set_tags(ii: u64, src: &Path, dst: &Path) {
 }
 
 #[allow(dead_code)]
-/// Copies [src] to [dst], sets tags using a temporary file.
+/// Copies `src` to `dst`, sets tags to `dst` using a temporary file.
 ///
 fn file_copy_and_set_tags_via_tmp(ii: u64, src: &Path, dst: &Path) {
     let tmp_dir = TempDir::new().unwrap(); // Keep it!
@@ -499,6 +503,8 @@ fn src_check() -> (Vec<String>, PathBuf) {
 }
 
 /// Returns Artist, nicely shaped to be a part of a directory/file name.
+/// If `forw_dash` is true, the result starts with the dash
+/// (to be appended directly at the end of some other string).
 ///
 fn artist_part(forw_dash: bool) -> String {
     if *IS_ARTIST {
@@ -582,7 +588,7 @@ fn dst_create() -> PathBuf {
     DST_DIR.to_path_buf()
 }
 
-/// Extracts file name from the [src] track (number [ii])
+/// Extracts file name from the `src` track (number `ii`)
 /// and makes it pretty, if necessary.
 ///
 fn track_decorate(ii: u64, src: &Path, step: &[PathBuf]) -> PathBuf {
@@ -645,13 +651,13 @@ fn track_decorate(ii: u64, src: &Path, step: &[PathBuf]) -> PathBuf {
 }
 
 /// Calculates destination, complete with the file name,
-/// for the [src_file] track to be copied to and
-/// makes the copy of the valid track (number [ii]).
+/// for the `src_file` track to be copied to and
+/// makes the copy of the valid track (number `ii`).
 ///
 fn track_copy(
     ii: u64,
     src_file: &Path,
-    step: &[PathBuf], // All the subdirectories to be created below [dst].
+    step: &[PathBuf], // All the subdirectories to be created below ctx().dst.
     log: &mut Vec<String>,
 ) {
     fn step_flat_collect(_step: &[PathBuf]) -> PathBuf {
@@ -773,7 +779,7 @@ fn track_copy(
     );
 }
 
-/// Returns true, if [path] satisfies file-type (-e) CLI suggestion,
+/// Returns true, if `path` satisfies file-type (-e) CLI suggestion,
 /// otherwise false.
 /// If the file type is not supplied, returns true.
 ///
@@ -823,7 +829,7 @@ fn is_pattern_ok(path: &Path) -> bool {
     (*IS_PATTERN_OK)(path)
 }
 
-/// Returns the statistics of all the audiofiles in [dir] and its subdirectories
+/// Returns the statistics of all the audiofiles in `dir` and its subdirectories
 /// in the form of a tuple:
 /// (
 /// Full count of the files with common extensions, which failed to open (suspicious),
@@ -914,7 +920,7 @@ fn tracks_count(
 }
 
 /// Copies all the valid tracks to their destination, according to
-/// the options and GlobalState.
+/// the options and ctx().
 ///
 fn album_copy(now: &Instant, src: &Path, log: &mut Vec<String>) {
     fn show_dst() {
@@ -992,7 +998,7 @@ fn album_copy(now: &Instant, src: &Path, log: &mut Vec<String>) {
     OUT_DONE(now.elapsed().as_secs_f64());
 }
 
-/// To be wrapped in main()
+/// To be wrapped in `main()`
 ///
 pub fn app() {
     LazyLock::force(&ARGS);

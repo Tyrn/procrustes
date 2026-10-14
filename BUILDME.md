@@ -94,6 +94,12 @@ cargo build --no-default-features --features backend-taglib   # lean, taglib onl
 cargo build --no-default-features --features backend-lofty    # lean, lofty only
 ```
 
+- Docs
+
+```
+cargo doc --no-deps --open
+```
+
 ### Format
 
 ```

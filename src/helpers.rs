@@ -3,7 +3,7 @@ use crate::KNOWN_EXTENSIONS;
 use regex::Regex;
 use std::{cmp, ffi::OsStr, path::Path, sync::LazyLock};
 
-/// Returns a human readable string representation of [bytes], nicely rounded.
+/// Returns a human readable string representation of `bytes`, nicely rounded.
 ///
 pub fn human_fine(bytes: u64) -> String {
     static UNIT_LIST: [(&str, i32); 6] = [
@@ -40,7 +40,7 @@ pub fn human_fine(bytes: u64) -> String {
     )
 }
 
-/// Shrinks [s] to the [limit], removing an arbitrary
+/// Shrinks `s` to the `limit`, removing an arbitrary
 /// slice from the middle.
 ///
 pub fn str_shrink(s: &str, limit: usize) -> String {
@@ -60,7 +60,7 @@ pub fn str_shrink(s: &str, limit: usize) -> String {
     s.into_iter().collect()
 }
 
-/// Returns true, if [path] has an audio file extension, otherwise false.
+/// Returns true, if `path` has an audio file extension, otherwise false.
 ///
 pub fn is_audiofile_ext(path: &Path) -> bool {
     KNOWN_EXTENSIONS
@@ -75,7 +75,7 @@ pub fn has_ext_of(path: &str, ext: &str) -> bool {
 }
 
 #[allow(dead_code)]
-/// Returns a vector of integer numbers, embedded in [s].
+/// Returns a vector of integer numbers, embedded in `s`.
 ///
 pub fn str_strip_numbers(s: &str) -> Vec<i64> {
     static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\d+").unwrap());
