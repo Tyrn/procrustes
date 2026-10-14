@@ -7,7 +7,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["backend-taglib"]
+# Both backends are compiled in; the choice is made at runtime
+# via `-l` / `--alt-backend`.
+default = ["backend-taglib", "backend-lofty"]
 backend-taglib = ["dep:taglib"]
 backend-lofty = ["dep:lofty"]
 
@@ -27,7 +29,7 @@ terminal-spinners = "0.3.2"
 spinach = "3"
 owo-colors = "4"
 
-# Backend dependencies — exactly one is enabled via the features above.
+# Backend dependencies — both are enabled by default now.
 taglib = { version = "*", optional = true }
 lofty = { version = "0.25.4", optional = true }
 

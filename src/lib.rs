@@ -161,6 +161,13 @@ fn args_retrieve() -> ArgMatches {
                 .action(ArgAction::Count)
         )
         .arg(
+            Arg::new("l")
+                .short('l')
+                .long("alt-backend")
+                .help("Use the alternative (Lofty) backend for tag reading and writing")
+                .action(ArgAction::SetTrue)
+        )
+        .arg(
             Arg::new("d")
                 .short('d')
                 .long("drop-tracknumber")

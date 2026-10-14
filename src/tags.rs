@@ -1,18 +1,18 @@
 //! Audio file detection and tag editing.
 //!
-//! Two backends are available, selected at compile time:
+//! Two backends are available and are both compiled in by default:
 //!
-//!   * `backend-taglib` — uses the TagLib C++ library (default)
+//!   * `backend-taglib` — uses the TagLib C++ library
 //!   * `backend-lofty`  — uses the pure-Rust `lofty` crate
 //!
-//! Exactly one must be enabled. The public functions
-//! [`is_audiofile`] and [`file_set_tags`] have identical signatures
-//! under either backend, so call sites need no change.
+//! The runtime flag `-l` / `--alt-backend` selects between them.
+//! If only one feature is compiled in, the dispatcher falls back
+//! to it regardless of the flag.
 //!
-//! Build selection:
+//! Build with a single backend (lean build):
 //!
 //! ```text
-//! cargo build                                          # taglib (default)
+//! cargo build --no-default-features --features backend-taglib
 //! cargo build --no-default-features --features backend-lofty
 //! ```
 
@@ -21,14 +21,11 @@ use std::path::Path;
 use std::sync::LazyLock;
 
 // ---------------------------------------------------------------------
-// Backend selection guards
+// Backend availability guards
 // ---------------------------------------------------------------------
 
-#[cfg(all(feature = "backend-taglib", feature = "backend-lofty"))]
-compile_error!("features `backend-taglib` and `backend-lofty` are mutually exclusive");
-
 #[cfg(not(any(feature = "backend-taglib", feature = "backend-lofty")))]
-compile_error!("exactly one of `backend-taglib` or `backend-lofty` must be enabled");
+compile_error!("at least one of `backend-taglib` or `backend-lofty` must be enabled");
 
 // ---------------------------------------------------------------------
 // Shared helpers
@@ -42,11 +39,10 @@ fn quiet_if_not_verbose() -> Option<gag::Gag> {
 // ---------------------------------------------------------------------
 // Shared tag-composition state
 //
-// These are compiled under either backend, so both share one copy.
+// Compiled regardless of which backends are present.
 // ---------------------------------------------------------------------
 
 use crate::{initials::initials, ALBUM, ARTIST, IS_ALBUM, IS_ARTIST};
-// (adjust the import path above to match where these live in your crate)
 
 static INITIALS: LazyLock<String> = LazyLock::new(|| {
     if *IS_ARTIST {
@@ -99,9 +95,8 @@ static TITLE_COMPOSE: LazyLock<TitleCompose> = LazyLock::new(|| {
 // ---------------------------------------------------------------------
 
 #[cfg(feature = "backend-taglib")]
-/// Returns true, if [path] is a valid audio file, otherwise false.
-///
-pub fn is_audiofile(path: &Path) -> bool {
+/// Returns true if [path] is a valid audio file according to TagLib.
+pub fn is_audiofile_taglib(path: &Path) -> bool {
     use crate::is_pattern_ok;
 
     let _silence = quiet_if_not_verbose();
@@ -116,11 +111,9 @@ pub fn is_audiofile(path: &Path) -> bool {
 }
 
 #[cfg(feature = "backend-taglib")]
-/// Sets tags to [dst] audio file, using [ii] and [src] name in the title tag
-/// composition.
-///
-pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
-    use crate::{flag, BDELIM_ICON};
+/// Sets tags to [dst] using TagLib, composing the title from [ii] and [src].
+pub fn file_set_tags_taglib(ii: u64, src: &Path, dst: &Path) {
+    use crate::BDELIM_ICON;
 
     let _silence = quiet_if_not_verbose();
 
@@ -198,17 +191,17 @@ pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
 // lofty backend
 // ---------------------------------------------------------------------
 
-/// Parsing mode shared by both functions in the Lofty backend.
+/// Parsing mode shared by the Lofty functions.
 ///
 /// `BestAttempt` and `Relaxed` behave identically in practice for
 /// real-world libraries; `Strict` rejects roughly 30% of a typical
-/// audiobook collection. Kept as a named constant so both functions
-/// are guaranteed to agree.
+/// audiobook collection.
 #[cfg(feature = "backend-lofty")]
 const PARSING_MODE: lofty::config::ParsingMode = lofty::config::ParsingMode::Relaxed;
 
 #[cfg(feature = "backend-lofty")]
-pub fn is_audiofile(path: &Path) -> bool {
+/// Returns true if [path] is a valid audio file according to Lofty.
+pub fn is_audiofile_lofty(path: &Path) -> bool {
     use crate::is_pattern_ok;
     use lofty::config::ParseOptions;
     use lofty::probe::Probe;
@@ -227,8 +220,9 @@ pub fn is_audiofile(path: &Path) -> bool {
 }
 
 #[cfg(feature = "backend-lofty")]
-pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
-    use crate::{flag, BDELIM_ICON};
+/// Sets tags to [dst] using Lofty, composing the title from [ii] and [src].
+pub fn file_set_tags_lofty(ii: u64, src: &Path, dst: &Path) {
+    use crate::BDELIM_ICON;
 
     use lofty::config::{ParseOptions, WriteOptions};
     use lofty::file::AudioFile;
@@ -266,7 +260,6 @@ pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
     };
     let album = if *IS_ALBUM { Some(ALBUM.clone()) } else { None };
 
-    // Apply the composed values to a single tag.
     let apply = |tag: &mut Tag| {
         tag.set_title(title.clone());
         if let Some(t) = track {
@@ -280,7 +273,7 @@ pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
         }
     };
 
-    // ---- primary tag (ID3v2 for MP3, Vorbis for FLAC, etc.) ----
+    // ---- primary tag ----
 
     let tag_type = tagged.primary_tag_type();
     if tagged.primary_tag_mut().is_none() {
@@ -311,7 +304,8 @@ pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
         }
     }
 
-    // ---- write back (no panic; report and continue) ----
+    // ---- write back ----
+
     if tagged.save_to_path(dst, WriteOptions::default()).is_err() {
         eprintln!(
             "{}Failed to save tags to \"{}\".{}",
@@ -319,5 +313,65 @@ pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
             dst.display(),
             BDELIM_ICON
         );
+    }
+}
+
+// ---------------------------------------------------------------------
+// Runtime dispatcher
+//
+// `-l` / `--alt-backend` selects Lofty; otherwise TagLib is used.
+// If only one backend is compiled in, the dispatcher uses it and
+// ignores the flag.
+// ---------------------------------------------------------------------
+
+/// Returns true if [path] is a valid audio file.
+///
+/// Backend is chosen at runtime: TagLib by default, Lofty with `-l`.
+pub fn is_audiofile(path: &Path) -> bool {
+    #[cfg(all(feature = "backend-taglib", feature = "backend-lofty"))]
+    {
+        if flag("l") {
+            is_audiofile_lofty(path)
+        } else {
+            is_audiofile_taglib(path)
+        }
+    }
+
+    #[cfg(all(feature = "backend-taglib", not(feature = "backend-lofty")))]
+    {
+        let _ = flag("l");
+        is_audiofile_taglib(path)
+    }
+
+    #[cfg(all(feature = "backend-lofty", not(feature = "backend-taglib")))]
+    {
+        let _ = flag("l");
+        is_audiofile_lofty(path)
+    }
+}
+
+/// Sets tags to [dst] audio file, composing the title from [ii] and [src].
+///
+/// Backend is chosen at runtime: TagLib by default, Lofty with `-l`.
+pub fn file_set_tags(ii: u64, src: &Path, dst: &Path) {
+    #[cfg(all(feature = "backend-taglib", feature = "backend-lofty"))]
+    {
+        if flag("l") {
+            file_set_tags_lofty(ii, src, dst)
+        } else {
+            file_set_tags_taglib(ii, src, dst)
+        }
+    }
+
+    #[cfg(all(feature = "backend-taglib", not(feature = "backend-lofty")))]
+    {
+        let _ = flag("l");
+        file_set_tags_taglib(ii, src, dst)
+    }
+
+    #[cfg(all(feature = "backend-lofty", not(feature = "backend-taglib")))]
+    {
+        let _ = flag("l");
+        file_set_tags_lofty(ii, src, dst)
     }
 }
