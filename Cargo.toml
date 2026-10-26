@@ -31,7 +31,7 @@ owo-colors = "4"
 
 # Backend dependencies — both are enabled by default now.
 taglib = { version = "*", optional = true }
-lofty = { version = "0.25.4", optional = true }
+lofty = { version = "0.25.5", optional = true }
 
 # For distribution — smallest, fastest binary
 [profile.release]
