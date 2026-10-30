@@ -32,9 +32,23 @@ compile_error!("at least one of `backend-taglib` or `backend-lofty` must be enab
 // ---------------------------------------------------------------------
 
 /// Suppresses TagLib/Lofty warnings unless the user asked for them.
-fn quiet_if_not_verbose() -> Option<gag::Gag> {
-    (*VERBOSE_LEVEL < 2).then(|| gag::Gag::stderr().unwrap())
+type Silence = fn() -> Option<gag::Gag>;
+
+fn silence_on() -> Option<gag::Gag> {
+    Some(gag::Gag::stderr().unwrap())
 }
+
+fn silence_off() -> Option<gag::Gag> {
+    None
+}
+
+static QUIET_IF_NOT_VERBOSE: LazyLock<Silence> = LazyLock::new(|| {
+    if *VERBOSE_LEVEL < 2 {
+        silence_on
+    } else {
+        silence_off
+    }
+});
 
 // ---------------------------------------------------------------------
 // Shared tag-composition state
@@ -99,7 +113,7 @@ static TITLE_COMPOSE: LazyLock<TitleCompose> = LazyLock::new(|| {
 pub fn is_audiofile_taglib(path: &Path) -> bool {
     use crate::is_pattern_ok;
 
-    let _silence = quiet_if_not_verbose();
+    let _silence = QUIET_IF_NOT_VERBOSE();
 
     if !is_pattern_ok(path) {
         return false;
@@ -115,7 +129,7 @@ pub fn is_audiofile_taglib(path: &Path) -> bool {
 pub fn file_set_tags_taglib(ii: u64, src: &Path, dst: &Path) {
     use crate::BDELIM_ICON;
 
-    let _silence = quiet_if_not_verbose();
+    let _silence = QUIET_IF_NOT_VERBOSE();
 
     // ---- taglib-specific dispatch tables ----
 
@@ -206,7 +220,7 @@ pub fn is_audiofile_lofty(path: &Path) -> bool {
     use lofty::config::ParseOptions;
     use lofty::probe::Probe;
 
-    let _silence = quiet_if_not_verbose();
+    let _silence = QUIET_IF_NOT_VERBOSE();
 
     if !is_pattern_ok(path) {
         return false;
@@ -230,7 +244,7 @@ pub fn file_set_tags_lofty(ii: u64, src: &Path, dst: &Path) {
     use lofty::probe::Probe;
     use lofty::tag::{Tag, TagType};
 
-    let _silence = quiet_if_not_verbose();
+    let _silence = QUIET_IF_NOT_VERBOSE();
 
     // ---- open the destination (relaxed, no panic) ----
 
