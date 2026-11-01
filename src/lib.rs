@@ -876,6 +876,8 @@ fn tracks_count(
         p.file_name().unwrap().to_str().unwrap().to_string()
     }
 
+    // Sometimes the source dir can be a file: beware!
+    // A very special case of a single file to copy.
     if dir.is_file() {
         if is_audiofile(dir) {
             return (0, 0, 1, dir.metadata().unwrap().len());
